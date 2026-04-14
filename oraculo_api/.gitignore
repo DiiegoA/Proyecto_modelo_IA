@@ -1,0 +1,123 @@
+# ==========================================
+# OS / File Explorer
+# ==========================================
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ==========================================
+# Editors / IDEs
+# ==========================================
+.idea/
+.vscode/
+*.code-workspace
+
+# ==========================================
+# Python
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.python-version
+
+# ==========================================
+# Virtual Environments
+# ==========================================
+venv/
+.venv/
+env/
+ENV/
+
+# ==========================================
+# Environment / Secrets
+# ==========================================
+.env.local
+.env.*.local
+!.env.example
+
+# ==========================================
+# Packaging / Build
+# ==========================================
+build/
+dist/
+site/
+.eggs/
+*.egg
+*.egg-info/
+pip-wheel-metadata/
+
+# ==========================================
+# Testing / Coverage / Type Checking
+# ==========================================
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.hypothesis/
+.tox/
+.nox/
+.mypy_cache/
+.pyre/
+.ruff_cache/
+
+# ==========================================
+# Jupyter
+# ==========================================
+.ipynb_checkpoints/
+
+# ==========================================
+# Logs / Runtime Files
+# ==========================================
+*.log
+logs/
+*.pid
+*.pid.lock
+*.out
+*.err
+
+# ==========================================
+# Local Databases / Storage
+# ==========================================
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+instance/
+
+# ==========================================
+# Alembic / Migration Local Noise
+# ==========================================
+alembic_smoke.db
+
+# ==========================================
+# Local ML / Notebook Outputs
+# Keep the canonical model artifact tracked if needed.
+# ==========================================
+mlops_activos/
+artifacts/
+outputs/
+reports/
+tmp/
+temp/
+*.tmp
+*.bak
+*.orig
+
+# ==========================================
+# Hugging Face / Cache / Misc
+# ==========================================
+.cache/
+.huggingface/
+
+# ==========================================
+# Frontend / Node (safe to keep even if unused)
+# ==========================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

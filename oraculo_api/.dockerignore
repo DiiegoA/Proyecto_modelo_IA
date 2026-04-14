@@ -1,0 +1,15 @@
+.git
+.gitignore
+.pytest_cache
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+venv/
+.venv/
+.env
+alembic_smoke.db
+EDA_For_All_Tree.ipynb
+EDA_For_All_Tree_clean.ipynb

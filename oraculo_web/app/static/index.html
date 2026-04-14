@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Oraculo Web</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="page-shell">
+    <header class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Oraculo Stack</p>
+        <h1>Habla natural, autentica una vez y deja que el agente decida.</h1>
+        <p class="hero-text">
+          Esta web crea usuarios y autentica contra <strong>oraculo_api</strong>, conserva la sesion y reenvia el
+          token a <strong>oraculo_agente_ia</strong>. Si escribes una solicitud de prediccion con campos del Adult Income,
+          el agente llama a tu API del modelo. Si haces una pregunta documental, responde desde su RAG con citas.
+        </p>
+        <div class="hero-actions">
+          <button class="ghost-button" id="sample-prediction-button" type="button">Cargar ejemplo de prediccion</button>
+          <button class="ghost-button" id="sample-rag-button" type="button">Cargar pregunta documental</button>
+        </div>
+      </div>
+      <aside class="hero-card">
+        <h2>Como decide el agente</h2>
+        <ul>
+          <li><span class="badge badge-prediction">prediction</span> Detecta campos del dataset y consulta tu modelo.</li>
+          <li><span class="badge badge-rag">rag</span> Busca informacion puntual y devuelve citas.</li>
+          <li><span class="badge badge-hybrid">hybrid</span> Combina prediccion y explicacion documental.</li>
+          <li><span class="badge badge-clarification">clarification</span> Te pide los datos que faltan.</li>
+        </ul>
+      </aside>
+    </header>
+
+    <main class="layout">
+      <section class="panel auth-panel">
+        <div class="panel-header">
+          <p class="eyebrow">Acceso</p>
+          <h2>Registro e inicio de sesion</h2>
+        </div>
+
+        <div class="auth-toggle">
+          <button type="button" class="toggle-button is-active" data-auth-view="login">Entrar</button>
+          <button type="button" class="toggle-button" data-auth-view="register">Crear cuenta</button>
+        </div>
+
+        <form id="login-form" class="auth-form">
+          <label>
+            <span>Email</span>
+            <input type="email" name="email" placeholder="tu@correo.com" required>
+          </label>
+          <label>
+            <span>Password</span>
+            <input type="password" name="password" placeholder="Minimo 12 caracteres" required>
+          </label>
+          <button class="primary-button" type="submit">Iniciar sesion</button>
+        </form>
+
+        <form id="register-form" class="auth-form hidden">
+          <label>
+            <span>Nombre completo</span>
+            <input type="text" name="full_name" placeholder="Diego Aguirre" required>
+          </label>
+          <label>
+            <span>Email</span>
+            <input type="email" name="email" placeholder="tu@correo.com" required>
+          </label>
+          <label>
+            <span>Password</span>
+            <input type="password" name="password" placeholder="Mayuscula, minuscula, numero y simbolo" required>
+          </label>
+          <button class="primary-button" type="submit">Crear cuenta y entrar</button>
+        </form>
+
+        <div class="session-box" id="session-box">
+          <p class="session-empty">Todavia no hay una sesion activa.</p>
+        </div>
+        <button class="ghost-button hidden" id="logout-button" type="button">Cerrar sesion</button>
+      </section>
+
+      <section class="panel chat-panel">
+        <div class="panel-header">
+          <p class="eyebrow">Conversacion</p>
+          <div class="panel-header-row">
+            <h2>Chat con el agente</h2>
+            <button class="ghost-button" id="reset-thread-button" type="button">Nueva conversacion</button>
+          </div>
+        </div>
+
+        <div class="message-stream" id="message-stream">
+          <article class="empty-state">
+            <h3>Listo para hablar natural</h3>
+            <p>
+              Puedes pedir una prediccion con una descripcion natural del perfil Adult Income, o preguntar por la
+              arquitectura, endpoints, seguridad y funcionamiento del proyecto para activar el RAG.
+            </p>
+          </article>
+        </div>
+
+        <form id="chat-form" class="chat-form">
+          <label class="message-label">
+            <span>Mensaje</span>
+            <textarea id="message-input" name="message" rows="7" placeholder="Ejemplo: Quiero una prediccion. Soy hombre, tengo 39 anos, estudie Bachelors y trabajo 40 horas por semana..." required></textarea>
+          </label>
+          <div class="chat-actions">
+            <p class="helper-text" id="route-helper">El agente decide automaticamente si debe ir a prediction, rag o hybrid.</p>
+            <button class="primary-button" id="send-button" type="submit">Enviar al agente</button>
+          </div>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

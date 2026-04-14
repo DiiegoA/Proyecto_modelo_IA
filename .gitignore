@@ -1,0 +1,92 @@
+# ==========================================
+# Proyecto Oraculo - Root Git Ignore
+# ==========================================
+
+# --- OS / Explorer / editor noise ---
+.DS_Store
+Thumbs.db
+Desktop.ini
+ehthumbs.db
+Icon?
+*.swp
+*.swo
+*.tmp
+*.bak
+*.orig
+
+# --- IDEs / editors ---
+.vscode/
+.idea/
+*.code-workspace
+
+# --- Python caches ---
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.hypothesis/
+.mypy_cache/
+.ruff_cache/
+.pyre/
+.nox/
+.tox/
+.coverage
+.coverage.*
+htmlcov/
+
+# --- Virtual environments ---
+.venv/
+venv/
+env/
+ENV/
+*/.venv/
+*/.venv_run/
+*/.venv_test/
+*/venv/
+*/env/
+
+# --- Jupyter / notebooks ---
+.ipynb_checkpoints/
+
+# --- Secrets / local configuration ---
+.env
+.env.*
+!.env.example
+*/.env
+*/.env.*
+!*/.env.example
+
+# --- Python runtime artifacts ---
+*.log
+logs/
+*.pid
+
+# --- Databases / local state ---
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.sqlite-shm
+*.sqlite-wal
+
+# --- MLOps generated artifacts ---
+mlops_activos/
+*/mlops_activos/
+*.joblib
+pipeline_produccion.pkl
+model_manifest.json
+
+# --- Agent generated runtime data ---
+*/data/generated/
+*/data/qdrant/
+*/data/checkpoints/
+*/data/runtime/
+
+# --- Temporary notebook extraction workspace ---
+_tmp_nb_cells/
+
+# --- Planning / audit scratch files generated during local work ---
+cell_focus_plan.txt
+_plan_scan.txt
+validation_*.json
+
