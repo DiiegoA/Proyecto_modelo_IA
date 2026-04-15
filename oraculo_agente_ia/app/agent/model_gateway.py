@@ -12,7 +12,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 
 from app.agent.prediction_contract import PredictionExtractionCandidate, normalize_extracted_fields
-from app.agent.types import AnswerEnvelope, IntentDecision
+from app.agent.types import AnswerEnvelope, IntentDecision, ReflectionReview
 from app.core.config import Settings
 
 logger = logging.getLogger("oraculo_agent.model_gateway")
@@ -29,6 +29,7 @@ Reglas obligatorias:
 - Si respondes con base documental, usa solo la evidencia dada.
 - Si el usuario solo saluda o conversa, responde de forma natural y util.
 - Si faltan datos para una prediccion, pide pocos datos por turno y hazlo de forma conversacional.
+- Si el conversation_state incluye reflection_notes, usalas como aprendizaje del hilo para no repetir errores, rigidez o respuestas genericas.
 - Adapta el idioma a la ultima intervencion del usuario, con espanol como default.
 """.strip()
 
@@ -275,6 +276,60 @@ class ModelGateway:
             "Conecta el cerebro: necesito una API del LLM valida para conversar de forma natural, "
             "razonar sobre el contexto y responder como un asistente real."
         )
+
+    def reflect_answer(
+        self,
+        *,
+        route: str,
+        question: str,
+        draft_answer: str,
+        citations: list[dict[str, Any]],
+        missing_fields: list[str],
+        prediction_result: dict[str, Any] | None,
+        safety_flags: list[dict[str, Any]],
+        language: str,
+        history: list[dict[str, Any]] | None = None,
+        conversation_state: dict[str, Any] | None = None,
+    ) -> ReflectionReview | None:
+        if self.chat_model is None or route == "unsafe":
+            return None
+
+        prompt = [
+            SystemMessage(
+                content=(
+                    f"{ADULTBOT_SYSTEM_PROMPT}\n\n"
+                    "Actuas como el motor interno de reflexion de AdultBot. "
+                    "Evalua si la respuesta borrador realmente responde la pregunta, evita rigidez, "
+                    "suena natural y respeta la ruta activa. "
+                    "Solo pide una revision si la respuesta es generica, robotica, poco util, "
+                    "no resuelve la pregunta concreta, contradice la evidencia o no aprovecha el contexto. "
+                    "Si revisas, produce una version mejorada final lista para entregar al usuario. "
+                    "Nunca inventes citas, nunca inventes datos de prediccion y nunca suavices banderas de seguridad."
+                )
+            ),
+            HumanMessage(
+                content=json.dumps(
+                    {
+                        "route": route,
+                        "language": language,
+                        "question": question,
+                        "draft_answer": draft_answer,
+                        "history": _history_payload(history),
+                        "conversation_state": conversation_state or {},
+                        "citations": citations,
+                        "missing_fields": missing_fields,
+                        "prediction_result": prediction_result or {},
+                        "safety_flags": safety_flags,
+                    },
+                    ensure_ascii=False,
+                )
+            ),
+        ]
+        result = self._invoke_structured(prompt, ReflectionReview)
+        if result is None:
+            return None
+        review, _provider = result
+        return review
 
     def decide_intent_with_llm(
         self,

@@ -14,6 +14,8 @@ class ConversationState(BaseModel):
     prediction_slots: dict[str, Any] = Field(default_factory=dict)
     next_slot_to_ask: str | None = None
     conversation_summary: str = ""
+    last_reflection: str = ""
+    reflection_notes: list[str] = Field(default_factory=list)
     language: str = "es"
     turn_count: int = 0
 

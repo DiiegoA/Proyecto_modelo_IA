@@ -42,7 +42,7 @@ class AgentWorkflow:
         self.memory_service = memory_service
         self.oraculo_api_client = oraculo_api_client
         self.router = IntentRouter(model_gateway)
-        self.critic = ReflectionCritic()
+        self.critic = ReflectionCritic(model_gateway)
         self.graph = self._build_graph(checkpointer)
 
     def _build_graph(self, checkpointer):
@@ -106,6 +106,7 @@ class AgentWorkflow:
         conversation_goal: str,
         prediction_slots: dict | None = None,
         next_slot_to_ask: str | None = None,
+        reflection_note: str | None = None,
     ) -> dict:
         updated = conversation_state.model_copy(deep=True)
         updated.assistant_name = self.model_gateway.settings.assistant_name
@@ -119,6 +120,13 @@ class AgentWorkflow:
             [*(messages or []), {"role": "assistant", "content": answer}],
             limit=self.model_gateway.settings.chat_history_window,
         )
+        clean_reflection = (reflection_note or "").strip()
+        if clean_reflection:
+            notes = [note.strip() for note in updated.reflection_notes if str(note).strip()]
+            if not notes or notes[-1] != clean_reflection:
+                notes.append(clean_reflection)
+            updated.reflection_notes = notes[-3:]
+            updated.last_reflection = clean_reflection
         return updated.model_dump()
 
     def _load_context(self, state: AgentState) -> dict:
@@ -531,17 +539,35 @@ class AgentWorkflow:
 
     def _reflection_node(self, state: AgentState) -> dict:
         tool_results = state.get("tool_results", {})
+        language = state.get("language", "es")
+        conversation_state = self._coerce_conversation_state(state.get("conversation_state"), language=language)
         verdict = self.critic.review(
             route=state["intent"],
+            question=state.get("current_input", ""),
             answer=state.get("answer", ""),
             citations=state.get("citations", []),
             missing_fields=state.get("missing_prediction_fields", []),
             prediction_result=tool_results.get("prediction"),
             safety_flags=state.get("safety_flags", []),
+            language=language,
+            history=state.get("messages", []),
+            conversation_state=conversation_state.model_dump(),
         )
         answer = verdict.suggested_answer or state.get("answer", "")
+        updated_conversation_state = self._persistable_conversation_state(
+            conversation_state,
+            messages=state.get("messages", []),
+            answer=answer,
+            language=language,
+            active_route=conversation_state.active_route or state["intent"],
+            conversation_goal=conversation_state.conversation_goal or state["intent"],
+            prediction_slots=conversation_state.prediction_slots,
+            next_slot_to_ask=conversation_state.next_slot_to_ask,
+            reflection_note=verdict.reflection_note,
+        )
         return {
             "answer": answer,
             "reflection_report": verdict.model_dump(),
             "confidence": state.get("confidence", 0.0) if not verdict.issues else min(0.55, state.get("confidence", 0.0)),
+            "conversation_state": updated_conversation_state,
         }

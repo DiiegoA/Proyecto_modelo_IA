@@ -58,6 +58,8 @@ def test_dialogue_state_is_restored_from_last_assistant_metadata():
                     "prediction_slots": {"age": 39},
                     "next_slot_to_ask": "workclass",
                     "conversation_summary": "user: Hola",
+                    "last_reflection": "Responder de forma mas concreta.",
+                    "reflection_notes": ["Responder de forma mas concreta."],
                     "language": "es",
                     "turn_count": 1,
                 }
@@ -70,6 +72,8 @@ def test_dialogue_state_is_restored_from_last_assistant_metadata():
     assert state.active_route == "prediction"
     assert state.prediction_slots["age"] == 39
     assert state.next_slot_to_ask == "workclass"
+    assert state.last_reflection == "Responder de forma mas concreta."
+    assert state.reflection_notes == ["Responder de forma mas concreta."]
 
 
 def test_prediction_slots_merge_and_next_field_work():
@@ -129,3 +133,27 @@ def test_embedding_model_falls_back_to_openai_when_google_provider_fails(setting
     assert second_vector == [0.25, 0.75]
     assert calls["google"] == 1
     assert calls["openai"] == 2
+
+
+def test_reflection_review_revises_generic_chat_answer_with_fake_llm(settings_factory, fake_chat_model):
+    settings = settings_factory()
+    gateway = ModelGateway(settings)
+    gateway._chat_model = fake_chat_model
+
+    review = gateway.reflect_answer(
+        route="chat",
+        question="Como me puedes ayudar?",
+        draft_answer="Hola, soy AdultBot, tu asistente IA. Puedo conversar contigo, ayudarte con predicciones o responder dudas del proyecto.",
+        citations=[],
+        missing_fields=[],
+        prediction_result=None,
+        safety_flags=[],
+        language="es",
+        history=[],
+        conversation_state={},
+    )
+
+    assert review is not None
+    assert review.should_revise is True
+    assert "accionables" in review.reflection_note.lower()
+    assert "tres formas principales" in (review.improved_answer or "").lower()

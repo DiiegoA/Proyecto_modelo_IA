@@ -1,21 +1,34 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from app.agent.types import ReflectionVerdict
+
+if TYPE_CHECKING:
+    from app.agent.model_gateway import ModelGateway
 
 
 class ReflectionCritic:
+    def __init__(self, model_gateway: "ModelGateway | None" = None) -> None:
+        self.model_gateway = model_gateway
+
     def review(
         self,
         *,
         route: str,
+        question: str,
         answer: str,
         citations: list[dict],
         missing_fields: list[str],
         prediction_result: dict | None,
         safety_flags: list[dict],
+        language: str,
+        history: list[dict] | None = None,
+        conversation_state: dict | None = None,
     ) -> ReflectionVerdict:
         issues: list[str] = []
         suggested_answer: str | None = None
+        reflection_note = ""
 
         if safety_flags:
             issues.append("Safety flags were raised.")
@@ -25,6 +38,7 @@ class ReflectionCritic:
                 needs_clarification=False,
                 issues=issues,
                 suggested_answer="No puedo ayudar con esa solicitud de forma segura.",
+                reflection_note="Se detecto una solicitud insegura; la respuesta fue bloqueada.",
             )
 
         if route in {"rag", "hybrid"} and not citations:
@@ -44,6 +58,28 @@ class ReflectionCritic:
                     "Necesito un dato adicional para continuar con la prediccion. "
                     f"Por favor indicame {missing_fields[0]}."
                 )
+                reflection_note = "La aclaracion de prediccion no estaba solicitando los campos faltantes de forma util."
+
+        if not issues and self.model_gateway is not None:
+            review = self.model_gateway.reflect_answer(
+                route=route,
+                question=question,
+                draft_answer=answer,
+                citations=citations,
+                missing_fields=missing_fields,
+                prediction_result=prediction_result,
+                safety_flags=safety_flags,
+                language=language,
+                history=history,
+                conversation_state=conversation_state,
+            )
+            if review is not None:
+                if review.issues:
+                    issues.extend(review.issues)
+                if review.reflection_note:
+                    reflection_note = review.reflection_note
+                if review.should_revise and review.improved_answer:
+                    suggested_answer = review.improved_answer
 
         return ReflectionVerdict(
             is_safe=True,
@@ -51,4 +87,6 @@ class ReflectionCritic:
             needs_clarification=bool(missing_fields),
             issues=issues,
             suggested_answer=suggested_answer,
+            reflection_note=reflection_note,
+            revised=bool(suggested_answer and suggested_answer != answer),
         )

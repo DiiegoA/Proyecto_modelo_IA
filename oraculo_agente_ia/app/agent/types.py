@@ -32,6 +32,15 @@ class ReflectionVerdict(BaseModel):
     needs_clarification: bool = False
     issues: list[str] = Field(default_factory=list)
     suggested_answer: str | None = None
+    reflection_note: str = ""
+    revised: bool = False
+
+
+class ReflectionReview(BaseModel):
+    should_revise: bool = False
+    issues: list[str] = Field(default_factory=list)
+    reflection_note: str = ""
+    improved_answer: str | None = None
 
 
 class AnswerEnvelope(BaseModel):

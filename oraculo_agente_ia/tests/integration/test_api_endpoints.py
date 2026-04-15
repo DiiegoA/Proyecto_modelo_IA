@@ -168,6 +168,31 @@ def test_chat_invoke_capabilities_question_stays_conversational(
 
 
 @pytest.mark.integration
+def test_chat_invoke_reflection_rewrites_generic_help_answer(
+    client_factory,
+    fake_oraculo_api_client,
+    fake_chat_model,
+    token_factory,
+):
+    with client_factory(
+        fake_client=fake_oraculo_api_client,
+        fake_chat_model=fake_chat_model,
+    ) as (client, settings):
+        headers = {"Authorization": f"Bearer {token_factory(settings)}"}
+        response = client.post(
+            "/api/v1/chat/invoke",
+            json={"message": "Como me puedes ayudar?"},
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["route"] == "chat"
+    assert "tres formas principales" in payload["answer"].lower()
+    assert "presentación genérica" not in payload["answer"].lower()
+
+
+@pytest.mark.integration
 def test_chat_invoke_prediction_complete_calls_prediction_api(
     client_factory,
     fake_oraculo_api_client,

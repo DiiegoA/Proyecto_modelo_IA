@@ -135,6 +135,8 @@ class FakeConversationalModel:
                     "Puedo conversar contigo, guiar una predicción del dataset Adult Income paso a paso "
                     "y responder preguntas del proyecto con respaldo documental."
                 )
+            if any(token in question_lower for token in ["como me puedes ayudar", "cómo me puedes ayudar", "en que me puedes ayudar", "explícame qué hago"]):
+                return "Hola, soy AdultBot, tu asistente IA. Puedo conversar contigo, ayudarte con predicciones o responder dudas del proyecto."
             if "gracias" in question_lower:
                 return "Con gusto. Si quieres, seguimos conversando o avanzamos con una predicción."
             return "Estoy aquí para ayudarte con conversación, predicciones y preguntas documentales."
@@ -166,6 +168,28 @@ class FakeConversationalModel:
 
         if schema_name == "PredictionExtractionCandidate":
             return schema(**extract_prediction_fields(str(payload.get("message", ""))))
+
+        if schema_name == "ReflectionReview":
+            question = str(payload.get("question") or "").lower()
+            draft_answer = str(payload.get("draft_answer") or "")
+            if any(token in question for token in ["como me puedes ayudar", "cómo me puedes ayudar", "en que me puedes ayudar", "explícame qué hago"]) and "Hola, soy AdultBot" in draft_answer:
+                return schema(
+                    should_revise=True,
+                    issues=["The draft answer is too generic for the user's concrete question."],
+                    reflection_note="Cuando el usuario pide ayuda concreta, debo responder con opciones accionables en vez de repetir una presentación genérica.",
+                    improved_answer=(
+                        "Puedo ayudarte de tres formas principales: conversar contigo para orientarte, "
+                        "armar una predicción del dataset Adult con los datos que me des en un solo mensaje "
+                        "o responder preguntas del proyecto con respaldo documental. "
+                        "Si quieres, dime cuál de esas tres rutas te sirve y empezamos."
+                    ),
+                )
+            return schema(
+                should_revise=False,
+                issues=[],
+                reflection_note="La respuesta ya estaba alineada con la intención del usuario.",
+                improved_answer=None,
+            )
 
         raise RuntimeError(f"Unsupported structured schema in fake model: {schema_name}")
 
