@@ -91,18 +91,25 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 class MaxRequestSizeMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, max_request_size_bytes: int):
+    def __init__(self, app, settings: Settings):
         super().__init__(app)
-        self.max_request_size_bytes = max_request_size_bytes
+        self.settings = settings
+
+    def _limit_for_path(self, path: str) -> int:
+        knowledge_upload_path = f"{self.settings.api_v1_prefix}/knowledge/upload"
+        if path == knowledge_upload_path:
+            return self.settings.knowledge_upload_max_request_size_bytes
+        return self.settings.max_request_size_bytes
 
     async def dispatch(self, request: Request, call_next):
         content_length = request.headers.get("content-length")
-        if content_length and int(content_length) > self.max_request_size_bytes:
+        max_request_size_bytes = self._limit_for_path(request.url.path)
+        if content_length and int(content_length) > max_request_size_bytes:
             return build_error_payload(
                 request,
                 code="payload_too_large",
                 message="Payload exceeds the maximum allowed size.",
-                detail={"max_request_size_bytes": self.max_request_size_bytes},
+                detail={"max_request_size_bytes": max_request_size_bytes},
                 status_code=413,
             )
         return await call_next(request)

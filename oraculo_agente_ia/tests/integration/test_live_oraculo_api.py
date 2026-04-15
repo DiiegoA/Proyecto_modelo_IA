@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import socket
 import subprocess
 import tempfile
@@ -8,6 +9,7 @@ import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
+from uuid import uuid4
 
 import httpx
 import pytest
@@ -94,7 +96,7 @@ def _run_live_oraculo_api(*, port: int, database_url: str, jwt_secret: str, admi
 
 @pytest.mark.integration
 @pytest.mark.live
-def test_agent_invokes_real_oraculo_api_for_prediction(client_factory, tmp_path):
+def test_agent_invokes_real_oraculo_api_for_prediction(client_factory):
     if not ORACULO_API_ROOT.exists():
         pytest.skip("Sibling oraculo_api project is not available.")
     if not ORACULO_API_PYTHON.exists():
@@ -104,45 +106,52 @@ def test_agent_invokes_real_oraculo_api_for_prediction(client_factory, tmp_path)
     jwt_secret = "live-integration-secret-that-is-long-enough-32"
     admin_email = "service.integration@example.com"
     admin_password = "StrongPass!12345"
-    database_url = sqlite_url(tmp_path / "live_integration.db")
+    runtime_root = ROOT / "oraculo_agente_ia" / "tests" / "tmp_runtime"
+    runtime_root.mkdir(parents=True, exist_ok=True)
+    runtime_dir = runtime_root / f"live-oraculo-api-{uuid4().hex}"
+    runtime_dir.mkdir(parents=True, exist_ok=False)
+    database_url = sqlite_url(runtime_dir / "live_integration.db")
 
-    with _run_live_oraculo_api(
-        port=port,
-        database_url=database_url,
-        jwt_secret=jwt_secret,
-        admin_email=admin_email,
-        admin_password=admin_password,
-    ) as base_url:
-        with httpx.Client(base_url=base_url, timeout=20.0) as upstream_client:
-            login_response = upstream_client.post(
-                "/api/v1/auth/login",
-                json={"email": admin_email, "password": admin_password},
+    try:
+        with _run_live_oraculo_api(
+            port=port,
+            database_url=database_url,
+            jwt_secret=jwt_secret,
+            admin_email=admin_email,
+            admin_password=admin_password,
+        ) as base_url:
+            with httpx.Client(base_url=base_url, timeout=20.0) as upstream_client:
+                login_response = upstream_client.post(
+                    "/api/v1/auth/login",
+                    json={"email": admin_email, "password": admin_password},
+                )
+                assert login_response.status_code == 200
+                user_token = login_response.json()["access_token"]
+
+            message = (
+                "Haz una prediccion con este JSON: "
+                '{"age": 39, "workclass": "Private", "fnlwgt": 77516, '
+                '"education": "Bachelors", "education.num": 13, '
+                '"marital.status": "Never-married", "occupation": "Adm-clerical", '
+                '"relationship": "Not-in-family", "race": "White", "sex": "Male", '
+                '"capital.gain": 2174, "capital.loss": 0, "hours.per.week": 40, '
+                '"native.country": "United-States"}'
             )
-            assert login_response.status_code == 200
-            user_token = login_response.json()["access_token"]
 
-        message = (
-            "Haz una prediccion con este JSON: "
-            '{"age": 39, "workclass": "Private", "fnlwgt": 77516, '
-            '"education": "Bachelors", "education.num": 13, '
-            '"marital.status": "Never-married", "occupation": "Adm-clerical", '
-            '"relationship": "Not-in-family", "race": "White", "sex": "Male", '
-            '"capital.gain": 2174, "capital.loss": 0, "hours.per.week": 40, '
-            '"native.country": "United-States"}'
-        )
-
-        with client_factory(
-            oraculo_api_base_url=base_url,
-            oraculo_api_verify_remote_user=True,
-            oraculo_api_jwt_secret_key=jwt_secret,
-            oraculo_api_service_email="broken.service@example.com",
-            oraculo_api_service_password="BrokenPassword!123",
-        ) as (client, _settings):
-            response = client.post(
-                "/api/v1/chat/invoke",
-                json={"message": message},
-                headers={"Authorization": f"Bearer {user_token}"},
-            )
+            with client_factory(
+                oraculo_api_base_url=base_url,
+                oraculo_api_verify_remote_user=True,
+                oraculo_api_jwt_secret_key=jwt_secret,
+                oraculo_api_service_email="broken.service@example.com",
+                oraculo_api_service_password="BrokenPassword!123",
+            ) as (client, _settings):
+                response = client.post(
+                    "/api/v1/chat/invoke",
+                    json={"message": message},
+                    headers={"Authorization": f"Bearer {user_token}"},
+                )
+    finally:
+        shutil.rmtree(runtime_dir, ignore_errors=True)
 
     assert response.status_code == 200
     payload = response.json()

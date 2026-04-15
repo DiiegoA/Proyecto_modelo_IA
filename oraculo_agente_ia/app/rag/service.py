@@ -6,6 +6,7 @@ import json
 import logging
 import sys
 from dataclasses import dataclass
+from io import BytesIO
 from pathlib import Path
 from uuid import NAMESPACE_URL, uuid5
 
@@ -19,9 +20,11 @@ from qdrant_client.http.exceptions import UnexpectedResponse
 from app.agent.model_gateway import ModelGateway
 from app.agent.prediction_contract import FIELD_DISPLAY_NAMES
 from app.core.config import Settings
+from app.core.exceptions import OraculoAgentError
 from app.db.repositories import KnowledgeSourceRepository
 
 logger = logging.getLogger("oraculo_agent.knowledge")
+SUPPORTED_KNOWLEDGE_SUFFIXES = {".md", ".txt", ".json", ".csv", ".pdf"}
 
 
 @dataclass
@@ -118,18 +121,22 @@ class KnowledgeService:
         documents: list[SourceDocument] = []
 
         candidate_paths: list[Path] = []
-        candidate_paths.extend(self.settings.knowledge_base_dir.rglob("*.md"))
+        candidate_paths.extend(
+            path
+            for path in self.settings.knowledge_base_dir.rglob("*")
+            if path.is_file() and path.suffix.lower() in SUPPORTED_KNOWLEDGE_SUFFIXES
+        )
         candidate_paths.extend(self.settings.generated_dir.glob("*.*"))
         api_readme = self.settings.project_root / "oraculo_api" / "README.md"
         if api_readme.exists():
             candidate_paths.append(api_readme)
 
         for path in candidate_paths:
-            if path.suffix.lower() not in {".md", ".txt", ".json"}:
+            if path.suffix.lower() not in SUPPORTED_KNOWLEDGE_SUFFIXES:
                 continue
             if not path.exists():
                 continue
-            content = path.read_text(encoding="utf-8", errors="ignore").strip()
+            content = self._read_document_content(path).strip()
             if not content:
                 continue
             relative_path = path.relative_to(self.settings.project_root) if path.is_relative_to(self.settings.project_root) else path
@@ -144,6 +151,74 @@ class KnowledgeService:
                 )
             )
         return documents
+
+    def _extract_pdf_text(self, content: bytes) -> str:
+        try:
+            from pypdf import PdfReader
+        except ImportError as exc:
+            raise OraculoAgentError(
+                "PDF ingestion requires the pypdf dependency.",
+                code="pdf_dependency_missing",
+                status_code=500,
+                detail={},
+            ) from exc
+
+        reader = PdfReader(BytesIO(content))
+        extracted_pages = [(page.extract_text() or "").strip() for page in reader.pages]
+        return "\n\n".join(page for page in extracted_pages if page).strip()
+
+    def _read_document_content(self, path: Path) -> str:
+        suffix = path.suffix.lower()
+        if suffix == ".pdf":
+            return self._extract_pdf_text(path.read_bytes())
+        return path.read_text(encoding="utf-8", errors="ignore")
+
+    @staticmethod
+    def _sanitize_filename(file_name: str) -> str:
+        raw_name = Path(file_name or "").name.strip()
+        cleaned_name = "".join(char if char.isalnum() or char in {"-", "_", ".", " "} else "_" for char in raw_name)
+        normalized_name = cleaned_name.replace(" ", "_").strip("._")
+        return normalized_name or "documento.md"
+
+    def store_uploaded_document(self, *, file_name: str, content: bytes) -> dict[str, str | int]:
+        safe_name = self._sanitize_filename(file_name)
+        suffix = Path(safe_name).suffix.lower()
+        if suffix not in SUPPORTED_KNOWLEDGE_SUFFIXES:
+            raise OraculoAgentError(
+                "Unsupported document type for knowledge upload.",
+                code="unsupported_document_type",
+                status_code=422,
+                detail={"supported_extensions": sorted(SUPPORTED_KNOWLEDGE_SUFFIXES)},
+            )
+        if not content:
+            raise OraculoAgentError(
+                "The uploaded document is empty.",
+                code="empty_document",
+                status_code=422,
+                detail={},
+            )
+        if suffix == ".pdf":
+            extracted_text = self._extract_pdf_text(content)
+            if not extracted_text:
+                raise OraculoAgentError(
+                    "The uploaded PDF does not contain extractable text.",
+                    code="empty_pdf_content",
+                    status_code=422,
+                    detail={},
+                )
+
+        target_path = self.settings.knowledge_uploads_dir / safe_name
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        target_path.write_bytes(content)
+
+        relative_path = target_path.relative_to(self.settings.project_root)
+        return {
+            "file_name": safe_name,
+            "source_path": str(relative_path).replace("\\", "/"),
+            "source_type": suffix.lstrip("."),
+            "title": target_path.stem.replace("_", " ").title(),
+            "file_size_bytes": len(content),
+        }
 
     def reindex(self, *, mode: str = "incremental") -> tuple[int, int]:
         source_documents = self._collect_static_documents()

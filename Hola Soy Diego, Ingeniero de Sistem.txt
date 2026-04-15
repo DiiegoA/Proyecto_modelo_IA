@@ -1,0 +1,17 @@
+Hola Soy Diego, Ingeniero de Sistemas y tu?
+
+Que es adult income?
+
+quiero que me des un ejemplo cpmpleto de todas las variables para predecir
+
+tiene que ser en formato json o puedo enviartelo en lenguaje natural?
+
+entonces dame un ejemplo en lenguaje natural, completo
+
+Tengo 34 años, trabajo en una empresa privada, mi peso muestral es 203034, tengo licenciatura, estudié 13 años, estoy separado, trabajo en Ventas, mi relación es no es de la familia, soy de raza blanca, soy hombre, no tuve ganancia de capital, tuve  pérdida de capital por 2824, trabajo 50 horas por semana y soy de Estados Unidos.
+
+Tengo 25 años, trabajo en una empresa privada, mi peso muestral es 203034, tengo licenciatura, estudié 13 años, estoy separada, trabajo en ventas, mi relación es no es de la familia, soy de raza negra, soy mujer, no tuve ganancia de capital, tuve  pérdida de capital por 2824, trabajo 50 horas por semana y soy de México.
+
+si ayudame a interpretar esta predicción en palabras simples, ademas por ser negra y mujer pense que no podia ganar mas de 50k
+
+como me llamo?

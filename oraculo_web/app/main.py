@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from fastapi import Depends, FastAPI, Request, status
+from fastapi import Depends, FastAPI, File, Request, UploadFile, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse
@@ -149,6 +149,29 @@ def create_app(settings: Settings | None = None, gateway: OraculoGateway | None 
     ) -> dict[str, Any]:
         token = _get_session_token(request)
         return app_gateway.invoke_chat(token=token, payload=payload.model_dump(exclude_none=True))
+
+    @application.get("/api/knowledge/sources", tags=["Knowledge"])
+    def list_knowledge_sources(
+        request: Request,
+        app_gateway: OraculoGateway = Depends(get_gateway),
+    ) -> dict[str, Any]:
+        token = _get_session_token(request)
+        return app_gateway.list_knowledge_sources(token=token)
+
+    @application.post("/api/knowledge/upload", tags=["Knowledge"])
+    async def upload_knowledge_document(
+        request: Request,
+        file: UploadFile = File(...),
+        app_gateway: OraculoGateway = Depends(get_gateway),
+    ) -> dict[str, Any]:
+        token = _get_session_token(request)
+        content = await file.read()
+        return app_gateway.upload_knowledge_document(
+            token=token,
+            file_name=file.filename or "documento.md",
+            file_bytes=content,
+            content_type=file.content_type,
+        )
 
     return application
 

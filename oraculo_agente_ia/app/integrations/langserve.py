@@ -6,7 +6,13 @@ from langserve import add_routes
 
 def mount_langserve_debug_routes(app, *, workflow, knowledge_service) -> None:
     routing_runnable = RunnableLambda(
-        lambda payload: workflow.router.route(payload["message"], extracted_field_count=0).model_dump()
+        lambda payload: workflow.router.route(
+            payload["message"],
+            extracted_field_count=0,
+            conversation_state=payload.get("conversation_state"),
+            history=payload.get("history"),
+            language=payload.get("language", "es"),
+        ).model_dump()
     )
     rag_runnable = RunnableLambda(
         lambda payload: {"hits": knowledge_service.retrieve(query=payload["query"])}

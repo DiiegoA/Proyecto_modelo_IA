@@ -21,6 +21,17 @@ class ReindexResponse(BaseSchema):
     status: str
 
 
+class UploadKnowledgeResponse(BaseSchema):
+    file_name: str
+    source_path: str
+    source_type: str
+    title: str
+    file_size_bytes: int
+    indexed_sources: int
+    total_chunks: int
+    status: str
+
+
 class KnowledgeSourceResponse(BaseSchema):
     id: str
     source_path: str

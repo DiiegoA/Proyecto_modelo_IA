@@ -40,6 +40,19 @@ class Settings(BaseSettings):
     google_chat_model: str = "gemini-2.5-flash"
     google_embedding_model: str = "models/gemini-embedding-001"
     google_temperature: float = Field(default=0.1, ge=0.0, le=1.0)
+    openai_api_key: str | None = None
+    openai_base_url: str | None = None
+    openai_chat_model: str = "gpt-4.1-mini"
+    openai_embedding_model: str = "text-embedding-3-small"
+    openai_temperature: float = Field(default=0.1, ge=0.0, le=1.0)
+    chatgpt_api_key: str | None = None
+    chatgpt_base_url: str | None = None
+    chatgpt_chat_model: str | None = None
+    chatgpt_embedding_model: str | None = None
+    chatgpt_temperature: float | None = Field(default=None, ge=0.0, le=1.0)
+    assistant_name: str = "AdultBot"
+    chat_history_window: int = Field(default=8, ge=2, le=20)
+    prediction_fields_per_turn: int = Field(default=14, ge=1, le=14)
 
     oraculo_api_base_url: str = "https://diiegoal-oraculo-api.hf.space"
     oraculo_api_timeout_seconds: int = Field(default=20, ge=1, le=120)
@@ -63,6 +76,7 @@ class Settings(BaseSettings):
         default_factory=lambda: ["http://localhost:3000", "http://127.0.0.1:3000"]
     )
     max_request_size_bytes: int = 65_536
+    knowledge_upload_max_request_size_bytes: int = Field(default=10_485_760, ge=262_144, le=52_428_800)
     rate_limit_enabled: bool = True
     rate_limit_requests: int = 60
     rate_limit_window_seconds: int = 60
@@ -170,6 +184,10 @@ class Settings(BaseSettings):
         return self.base_dir / "knowledge_base"
 
     @property
+    def knowledge_uploads_dir(self) -> Path:
+        return self.knowledge_base_dir / "uploads"
+
+    @property
     def resolved_checkpoints_db_path(self) -> Path:
         path = Path(self.checkpoints_db_path)
         return path if path.is_absolute() else self.base_dir / path
@@ -184,6 +202,30 @@ class Settings(BaseSettings):
         return bool(self.google_api_key)
 
     @property
+    def can_use_openai_models(self) -> bool:
+        return bool(self.effective_openai_api_key)
+
+    @property
+    def effective_openai_api_key(self) -> str | None:
+        return self.openai_api_key or self.chatgpt_api_key
+
+    @property
+    def effective_openai_base_url(self) -> str | None:
+        return self.openai_base_url or self.chatgpt_base_url
+
+    @property
+    def effective_openai_chat_model(self) -> str:
+        return self.chatgpt_chat_model or self.openai_chat_model
+
+    @property
+    def effective_openai_embedding_model(self) -> str:
+        return self.chatgpt_embedding_model or self.openai_embedding_model
+
+    @property
+    def effective_openai_temperature(self) -> float:
+        return self.chatgpt_temperature if self.chatgpt_temperature is not None else self.openai_temperature
+
+    @property
     def is_production(self) -> bool:
         return self.environment == "production"
 
@@ -191,6 +233,7 @@ class Settings(BaseSettings):
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.generated_dir.mkdir(parents=True, exist_ok=True)
         self.knowledge_base_dir.mkdir(parents=True, exist_ok=True)
+        self.knowledge_uploads_dir.mkdir(parents=True, exist_ok=True)
         self.resolved_qdrant_path.mkdir(parents=True, exist_ok=True)
         self.resolved_checkpoints_db_path.parent.mkdir(parents=True, exist_ok=True)
 

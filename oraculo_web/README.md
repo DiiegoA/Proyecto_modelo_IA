@@ -1,27 +1,34 @@
 # Oraculo Web
 
-Cliente web en `FastAPI` para operar tu stack completo desde una sola interfaz:
+Frontend web en `FastAPI` para trabajar con el stack completo de Oráculo desde una interfaz minimalista y profesional.
 
-- registra e inicia sesion contra `oraculo_api`
-- guarda la sesion web sin pedir que el usuario pegue tokens manualmente
-- reenvia el bearer a `oraculo_agente_ia`
-- permite conversar en lenguaje natural para que el agente decida entre `prediction`, `rag`, `hybrid`, `clarification` o `unsafe`
+## Qué hace
 
-## Flujo funcional
+- autentica usuarios contra `oraculo_api`
+- conserva la sesión en cookie del servidor
+- reenvía el bearer a `oraculo_agente_ia`
+- expone una experiencia chat-first con `AdultBot`
+- mantiene el `thread_id` en `localStorage` para continuidad conversacional
 
-1. El usuario crea cuenta o inicia sesion desde la web.
-2. `oraculo_web` llama a `oraculo_api /api/v1/auth/register` o `/api/v1/auth/login`.
-3. La web conserva el `access_token` en una cookie de sesion del servidor.
-4. Cuando el usuario escribe en el chat, `oraculo_web` manda el mensaje a `oraculo_agente_ia /api/v1/chat/invoke` usando ese mismo bearer.
-5. El agente decide:
-   - `prediction`: consulta tu API del modelo
-   - `rag`: responde con conocimiento y citas
-   - `hybrid`: combina ambas cosas
-   - `clarification`: pide datos faltantes
+## Experiencia actual
+
+La UI está pensada como un workspace sobrio:
+
+- acceso y sesión en una columna lateral compacta
+- panel central de conversación con `AdultBot`
+- quick actions para saludo, capacidades, predicción guiada y consulta documental
+- estados visuales intermedios mientras el agente procesa
+- render diferenciado para predicciones, citas y flags de seguridad
+
+## Flujo
+
+1. el usuario se registra o inicia sesión desde la web
+2. `oraculo_web` llama a `oraculo_api`
+3. guarda la sesión en cookie
+4. cuando el usuario escribe, la web llama a `oraculo_agente_ia /api/v1/chat/invoke`
+5. la respuesta se renderiza como conversación natural, predicción, RAG o híbrido
 
 ## Variables de entorno
-
-Copia `.env.example` a `.env` y ajusta lo necesario:
 
 ```env
 ORACULO_WEB_ORACULO_API_BASE_URL=https://diiegoal-oraculo-api.hf.space
@@ -29,7 +36,7 @@ ORACULO_WEB_ORACULO_AGENT_BASE_URL=https://diiegoal-oraculo-agente-ia.hf.space
 ORACULO_WEB_SESSION_SECRET_KEY=change-this-session-secret-key
 ```
 
-## Ejecucion local
+## Ejecución local
 
 ```powershell
 cd "C:\Users\tobby\Documents\IA\Clase\Dataset Adult Census Income\Proyecto\oraculo_web"
@@ -41,17 +48,16 @@ Abre:
 
 - `http://127.0.0.1:3000`
 
-## Sugerencias de uso
-
-- Para prediccion:
-  `Haz una prediccion con este JSON: {...}`
-- Para RAG:
-  `Explicame que hace el proyecto y que endpoint usa el agente para chat`
-- Para hybrid:
-  `Haz una prediccion con este JSON y dime que endpoint usa el agente`
-
 ## Pruebas
 
 ```powershell
 .venv\Scripts\python -m pytest -q
 ```
+
+La suite valida:
+
+- login y registro
+- sesión protegida
+- proxy al endpoint de chat
+- render base del frontend
+- compatibilidad con ruta `chat`

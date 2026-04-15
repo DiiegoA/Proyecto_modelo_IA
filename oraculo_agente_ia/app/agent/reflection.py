@@ -33,14 +33,17 @@ class ReflectionCritic:
 
         if route == "prediction" and not missing_fields and prediction_result is None:
             issues.append("Prediction route completed without prediction result.")
-            suggested_answer = "La API de predicción no devolvió un resultado válido. Inténtalo de nuevo."
+            suggested_answer = "La API de prediccion no devolvio un resultado valido. Intentalo de nuevo."
 
-        if route == "prediction" and missing_fields and "faltan" not in answer.lower():
-            issues.append("Prediction clarification should explicitly request missing fields.")
-            suggested_answer = (
-                "Necesito más datos para pedir la predicción a la API. "
-                f"Campos faltantes: {', '.join(missing_fields)}."
-            )
+        if route == "prediction" and missing_fields:
+            answer_lower = answer.lower()
+            requests_any_missing_field = any(field.lower() in answer_lower for field in missing_fields)
+            if not requests_any_missing_field:
+                issues.append("Prediction clarification should request at least one missing field.")
+                suggested_answer = (
+                    "Necesito un dato adicional para continuar con la prediccion. "
+                    f"Por favor indicame {missing_fields[0]}."
+                )
 
         return ReflectionVerdict(
             is_safe=True,

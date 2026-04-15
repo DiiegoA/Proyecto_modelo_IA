@@ -62,8 +62,65 @@ def test_chat_invoke_uses_token_from_session_cookie(client, fake_gateway):
     ]
 
 
+def test_chat_invoke_can_render_conversational_route(client, fake_gateway):
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": "diiegoaguirrel@gmail.com",
+            "password": "Lauracamila95*",
+        },
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        "/api/chat/invoke",
+        json={
+            "thread_id": "thread-chat",
+            "message": "Hola",
+            "language": "es",
+            "metadata": {"source": "test"},
+        },
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["route"] == "chat"
+    assert "AdultBot" in payload["answer"]
+
+
 def test_index_serves_frontend(client):
     response = client.get("/")
 
     assert response.status_code == 200
-    assert "Oraculo Web" in response.text
+    assert "AdultBot" in response.text
+    assert "Workspace con AdultBot" in response.text
+    assert "Cargar documentos" in response.text
+    assert ".pdf" in response.text
+
+
+def test_knowledge_upload_uses_session_and_gateway(client, fake_gateway):
+    login_response = client.post(
+        "/api/auth/login",
+        json={
+            "email": "diiegoaguirrel@gmail.com",
+            "password": "Lauracamila95*",
+        },
+    )
+    assert login_response.status_code == 200
+
+    response = client.post(
+        "/api/knowledge/upload",
+        files={"file": ("manual.pdf", b"%PDF-1.4 fake", "application/pdf")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "uploaded"
+    assert fake_gateway.upload_calls == [
+        {
+            "token": "session-token",
+            "file_name": "manual.pdf",
+            "file_bytes": b"%PDF-1.4 fake",
+            "content_type": "application/pdf",
+        }
+    ]

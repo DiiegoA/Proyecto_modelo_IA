@@ -9,73 +9,103 @@ pinned: false
 
 # Oraculo Agente IA
 
-Servicio agentic en `FastAPI` para conversar con usuarios, resolver dudas documentales con `RAG`, y solicitar predicciones reales a `oraculo_api` cuando el usuario entrega los campos del dataset Adult Income.
+Backend agentic en `FastAPI` para el ecosistema Oráculo. Esta versión ya no se comporta como un router rígido con respuestas prediseñadas: usa un **chat model real** como cerebro conversacional, conserva routing especializado para `prediction`, `rag`, `hybrid` y `unsafe`, y mantiene memoria operativa por `thread`.
 
-El proyecto esta construido para crecer como backend profesional:
+## Qué hace hoy
 
-- `LangGraph` para la orquestacion stateful del agente.
-- `LangChain` para modelos, embeddings, retrieval y structured outputs.
-- `Google Gemini` como proveedor LLM por defecto.
-- `Qdrant` local persistente como vector store para conocimiento y memoria semantica.
-- `SQLite` para threads, mensajes, knowledge sources, memorias y checkpoints locales.
-- `LangServe` opcional para rutas debug/playground de router y RAG.
-- `LangMem` como capa opcional de extraccion de memoria a largo plazo.
+- conversa de forma natural con la ruta `chat`
+- guía predicciones del dataset Adult Income **paso a paso**
+- usa `RAG` sobre chunks indexados en Qdrant
+- conserva memoria corta del thread y memoria larga semántica
+- llama a `oraculo_api` para la inferencia real
+- aplica guardrails de seguridad y reflexión final antes de responder
 
-## Objetivo
+## Stack principal
 
-El flujo principal es:
+- `LangGraph`: orquestación stateful del workflow
+- `LangChain`: modelos, mensajes, structured output y retrieval
+- `Google Gemini`: proveedor primario de chat/embeddings
+- `OpenAI`: fallback opcional para chat/embeddings
+- `Qdrant`: vector store de conocimiento y memoria
+- `SQLite`: threads, mensajes, memorias, fuentes y checkpoints
+- `LangMem`: extracción opcional de memorias útiles
+- `LangServe`: rutas debug/playground opcionales
 
-1. El usuario envia una peticion autenticada al agente.
-2. El router decide si la intencion es `prediction`, `rag`, `hybrid`, `clarification` o `unsafe`.
-3. Si faltan campos para inferencia, el agente pide aclaraciones y no inventa variables.
-4. Si la necesidad es documental, hace retrieval sobre el corpus indexado y exige citas.
-5. Si la necesidad es de prediccion, llama a `oraculo_api` con una cuenta tecnica y mantiene el contrato REST existente.
-6. Un critic de reflexion revisa evidencia, seguridad, coherencia y degradacion segura antes de responder.
-
-## Arquitectura
+## Flujo de alto nivel
 
 ```mermaid
 flowchart TD
     U["Usuario autenticado"] --> API["FastAPI /api/v1/chat"]
     API --> G["LangGraph workflow"]
-    G --> R["Router"]
-    R --> P["Prediction specialist"]
-    R --> K["RAG specialist"]
-    R --> C["Clarification / unsafe"]
-    P --> OA["oraculo_api REST"]
+    G --> C["Context loader"]
+    C --> R["Intent router + dialogue state"]
+    R --> CH["Chat"]
+    R --> P["Prediction"]
+    R --> K["RAG"]
+    R --> H["Hybrid"]
+    R --> S["Unsafe / clarification"]
+    P --> OA["oraculo_api /predictions"]
     K --> Q["Qdrant knowledge_chunks"]
-    G --> M["Memory service"]
+    C --> M["Memory service"]
     M --> QM["Qdrant semantic_memory"]
-    M --> SQL["SQLite runtime"]
     G --> X["Reflection critic"]
     X --> API
 ```
 
-### Componentes principales
+## Rutas del agente
 
-- `app/main.py`: app factory, lifespan, servicios compartidos, middlewares y montaje opcional de LangServe.
-- `app/agent/`: tipos, router, contrato de prediccion, model gateway, critic de reflexion y grafo de LangGraph.
-- `app/clients/oraculo_api.py`: cliente HTTP tipado con retry, timeout y refresh de token tecnico.
-- `app/rag/service.py`: ingesta, hashing, reindex incremental/full, retrieval y snapshot de fuentes.
-- `app/memory/service.py`: extraccion heuristica/LangMem, redaccion de PII y memoria semantica.
-- `app/services/`: coordinacion de chat, health, knowledge admin y threads.
-- `app/db/`: modelos, repositorios y session factory SQLAlchemy.
-- `knowledge_base/`: corpus curado del agente.
-- `scripts/reindex_knowledge.py`: reindex manual del corpus.
+- `chat`: saludo, onboarding, ayuda general y continuidad conversacional
+- `prediction`: recolección de slots + predicción real contra `oraculo_api`
+- `rag`: respuesta documental con citas obligatorias
+- `hybrid`: predicción + contexto documental en una sola respuesta
+- `unsafe`: rechazo seguro de requests maliciosos
+- `clarification`: estado interno para desambiguación fina
 
-## Funcionalidades incluidas
+## Memoria y contexto
 
-- Chat `invoke` y `stream` con trazabilidad por `thread_id`.
-- Orquestacion stateful con checkpoints SQLite de LangGraph.
-- RAG con citas obligatorias y degradacion a "no tengo respaldo suficiente".
-- Integracion real con `oraculo_api` via `/api/v1/auth/login`, `/api/v1/auth/me` y `/api/v1/predictions`.
-- Memoria corta por thread y memoria larga semantica por usuario.
-- Guardrails para prompt injection, requests inseguras y claims sin evidencia.
-- Health checks `live` y `ready`.
-- Endpoints admin para reindex y listado de fuentes.
-- Rutas LangServe opcionales para debug:
-  - `/debug/langserve/router`
-  - `/debug/langserve/rag`
+El agente usa dos niveles de memoria:
+
+- **memoria corta**:
+  - historial reciente del thread
+  - `conversation_state` persistido en `metadata_json` del mensaje del asistente
+  - slots de predicción ya capturados
+- **memoria larga**:
+  - recuerdos semánticos por usuario
+  - persistidos en SQLite + Qdrant
+  - extraídos por heurísticas y, si el LLM está disponible, con `LangMem`
+
+Esto permite que un usuario diga:
+
+1. `Quiero una predicción`
+2. `Tengo 39 años`
+3. `Trabajo 40 horas por semana`
+
+y el agente recuerde los datos anteriores sin pedirlos de nuevo.
+
+## RAG y chunks
+
+El conocimiento externo se construye así:
+
+1. se cargan documentos del directorio `knowledge_base/`
+2. se generan fuentes auxiliares en `data/generated/`
+3. se parte el contenido con `RecursiveCharacterTextSplitter`
+4. se indexan los chunks en Qdrant
+5. el agente reescribe la consulta cuando conviene
+6. recupera hits y compone la respuesta usando solo la evidencia disponible
+
+Si la base documental no respalda la respuesta, el agente lo dice explícitamente.
+
+## Cerebro del agente
+
+El gateway del modelo selecciona proveedor así:
+
+1. `Google Gemini` si hay `ORACULO_AGENT_GOOGLE_API_KEY`
+2. `OpenAI` si hay `ORACULO_AGENT_OPENAI_API_KEY`
+3. fallback sin LLM solo para desarrollo offline
+
+Cuando no hay cerebro conectado, el agente lo reconoce con una respuesta explícita del estilo:
+
+`Conecta el cerebro: necesito una API del LLM válida...`
 
 ## Endpoints
 
@@ -96,152 +126,107 @@ flowchart TD
 
 ### Knowledge admin
 
-- `POST /api/v1/knowledge/reindex`
 - `GET /api/v1/knowledge/sources`
+- `POST /api/v1/knowledge/reindex`
 
-## Seguridad
-
-El servicio aplica seguridad defensiva en varias capas:
-
-- JWT para endpoints de chat y threads.
-- `X-Agent-Admin-Key` para reindex y fuentes.
-- `TrustedHostMiddleware` y CORS configurables por entorno.
-- rate limiting in-memory por IP.
-- limite maximo de payload.
-- headers de seguridad (`CSP`, `X-Frame-Options`, `nosniff`, `Cache-Control`, etc.).
-- redaccion basica de PII antes de persistir memoria semantica.
-- allowlist de tools: solo retrieval, memoria y llamadas tipadas a `oraculo_api`.
-- rechazo explicito a prompt injection, exfiltracion y bypass de politicas.
-
-## Modelo y proveedor LLM
-
-- Chat/reflexion: `gemini-2.5-flash`
-- Embeddings: `models/gemini-embedding-001`
-
-Si no configuras `GOOGLE_API_KEY`, el sistema usa embeddings hash deterministas para no bloquear desarrollo local ni la suite de tests. Esto permite ejecutar RAG y memoria de forma offline, aunque con menos calidad semantica que Gemini.
-
-## Variables de entorno
-
-El archivo base es `.env.example`. Las mas importantes son:
+## Variables de entorno importantes
 
 - `ORACULO_AGENT_GOOGLE_API_KEY`
+- `ORACULO_AGENT_GOOGLE_CHAT_MODEL`
+- `ORACULO_AGENT_GOOGLE_EMBEDDING_MODEL`
+- `ORACULO_AGENT_OPENAI_API_KEY`
+- `ORACULO_AGENT_OPENAI_CHAT_MODEL`
+- `ORACULO_AGENT_OPENAI_EMBEDDING_MODEL`
+- `ORACULO_AGENT_ASSISTANT_NAME`
+- `ORACULO_AGENT_CHAT_HISTORY_WINDOW`
+- `ORACULO_AGENT_PREDICTION_FIELDS_PER_TURN`
 - `ORACULO_AGENT_ORACULO_API_BASE_URL`
-- `ORACULO_AGENT_ORACULO_API_JWT_SECRET_KEY`
 - `ORACULO_AGENT_ORACULO_API_SERVICE_EMAIL`
 - `ORACULO_AGENT_ORACULO_API_SERVICE_PASSWORD`
 - `ORACULO_AGENT_ADMIN_API_KEY`
-- `ORACULO_AGENT_ALLOWED_HOSTS`
-- `ORACULO_AGENT_CORS_ALLOW_ORIGINS`
-- `ORACULO_AGENT_QDRANT_PATH`
-- `ORACULO_AGENT_CHECKPOINTS_DB_PATH`
-- `ORACULO_AGENT_DATABASE_URL`
-- `ORACULO_AGENT_ENABLE_LANGSERVE`
 
-## Ejecucion local
+Toma como base `.env.example`.
+
+## Ejecución local
 
 ```powershell
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 copy .env.example .env
-```
-
-Ajusta `.env` con:
-
-- la URL real de `oraculo_api`
-- el mismo `JWT_SECRET_KEY` que usa `oraculo_api`
-- credenciales de la cuenta tecnica
-- tu `GOOGLE_API_KEY` si quieres usar Gemini real
-
-Luego puedes arrancar:
-
-```powershell
 uvicorn app.main:app --reload
 ```
 
-Documentacion:
+Swagger:
 
 - `http://127.0.0.1:8000/docs`
 
-## Reindex del conocimiento
+## Ejemplos de uso
 
-```powershell
-.venv\Scripts\python scripts\reindex_knowledge.py
-```
+### Conversación
 
-El reindex indexa:
+`Hola`
 
-- `knowledge_base/*.md`
-- fuentes generadas en `data/generated/`
-- `oraculo_api/README.md`
-- snapshot del `openapi` si la API esta disponible
+### Predicción progresiva
+
+1. `Quiero una predicción de ingresos`
+2. `Tengo 39 años`
+3. `Mi tipo de trabajo es Private`
+
+### Predicción completa
+
+`Haz una predicción con este JSON: {...}`
+
+### RAG
+
+`¿Qué endpoint usa el agente para chat sin streaming?`
+
+### Hybrid
+
+`Haz una predicción con este JSON y explícame qué endpoint usa el agente`
 
 ## Testing
 
-La suite cubre:
+La suite valida:
 
-- parsing y validacion de `PredictionInput`
-- router heuristico y critic de reflexion
-- settings y normalizacion de hosts/origins
-- cliente HTTP de `oraculo_api`
-- memoria con redaccion de PII
-- reindex incremental/full y retrieval sobre Qdrant
-- endpoints FastAPI de chat, health, admin, threads y streaming SSE
-- contrato OpenAPI con Schemathesis
-- integracion viva `agente -> oraculo_api`
+- conversación natural por ruta `chat`
+- continuidad del flujo de predicción entre turnos
+- extracción de campos desde JSON, `clave: valor` y lenguaje natural
+- memoria y redacción de PII
+- retrieval y reindex incremental/full
+- seguridad, rate limiting y headers
+- streaming SSE con eventos `accepted`, `route`, `slot_requested`, `tool_completed` y `final`
 
-Ejecutar toda la suite:
+Ejecución:
 
 ```powershell
-.venv\Scripts\pytest -q
+.venv\Scripts\python -m pytest -q
 ```
 
-Estado validado durante esta implementacion:
+Estado validado en esta iteración:
 
-- `30 passed`
+- `38 passed`
 
-## Observabilidad y evaluacion
+## Smoke test real del cerebro
 
-- Tracing local estructurado por logger y `request_id`.
-- `LangSmith` opcional por variables de entorno.
-- `trace_id` devuelto en cada respuesta de chat.
-- `thread_id` persistente para reproducibilidad de conversaciones.
+Con la API de Google presente en `.env`, el smoke test local devolvió:
 
-## Notas de produccion
+- proveedor activo: `google`
+- respuesta natural a `Hola`
+- confianza: `0.85`
 
-- `Qdrant` local funciona bien para un despliegue single-service; si necesitas concurrencia multi-instancia, pasa a un servidor Qdrant dedicado.
-- `SQLite` sirve para desarrollo y despliegue ligero; la capa de persistencia esta separada para migrar luego a Postgres.
-- El agente no ejecuta shell, SQL libre ni filesystem arbitrario.
-- Para produccion de LangChain/LangGraph, hoy es mas conservador usar Python 3.12 o 3.13; con Python 3.14 la app funciona, pero algunas dependencias aun muestran warnings upstream.
+## Seguridad
 
-## Troubleshooting
+- JWT para endpoints de chat y threads
+- validación remota opcional del usuario en `oraculo_api`
+- `X-Agent-Admin-Key` para endpoints admin
+- guardrails ante prompt injection y bypass
+- CSP, `TrustedHostMiddleware`, CORS y rate limit
+- sin shell ni filesystem arbitrario expuesto al usuario
 
-### `401 authentication_error`
+## Notas de producción
 
-- Verifica que el JWT del usuario este firmado con la misma secret que `oraculo_api`.
-- Revisa `ORACULO_AGENT_ORACULO_API_VERIFY_REMOTE_USER`.
-
-### `502 upstream_service_error`
-
-- Revisa `ORACULO_AGENT_ORACULO_API_BASE_URL`.
-- Valida la cuenta tecnica y el contrato real de `/api/v1/predictions`.
-
-### `ready = degraded`
-
-Es normal si falta alguna dependencia no critica, por ejemplo:
-
-- no hay `GOOGLE_API_KEY`
-- `oraculo_api` esta caida
-- aun no has indexado conocimiento
-
-### Qdrant bloqueado por otra instancia
-
-Si compartes carpeta local de Qdrant entre procesos distintos, el lock fallara. Para desarrollo concurrente usa rutas separadas o un Qdrant server externo.
-
-## Roadmap sugerido
-
-- Postgres para estado y checkpoints en multi-entorno.
-- Redis para rate limiting distribuido.
-- evaluaciones de LangSmith con datasets versionados.
-- aprobaciones humanas para tools sensibles.
-- dashboards de trazas, costos y calidad de retrieval.
+- Qdrant local sirve para single-instance; para escalar conviene servidor dedicado
+- SQLite es suficiente para entorno ligero y desarrollo
+- el diseño actual deja abierta una migración futura a Postgres + Redis + LangSmith más profundo
+- si quieres más calidad conversacional, el mayor salto no está en más templates sino en mejor provider/modelo y mejores fuentes documentales

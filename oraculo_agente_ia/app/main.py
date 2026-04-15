@@ -131,7 +131,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     application.add_middleware(TrustedHostMiddleware, allowed_hosts=app_settings.allowed_hosts)
     application.add_middleware(SecurityHeadersMiddleware, settings=app_settings)
-    application.add_middleware(MaxRequestSizeMiddleware, max_request_size_bytes=app_settings.max_request_size_bytes)
+    application.add_middleware(MaxRequestSizeMiddleware, settings=app_settings)
     application.add_middleware(RateLimitMiddleware, settings=app_settings)
     application.add_middleware(RequestContextMiddleware)
 

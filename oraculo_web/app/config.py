@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     request_timeout_seconds: int = Field(default=30, ge=5, le=120)
     oraculo_api_base_url: str = "https://diiegoal-oraculo-api.hf.space"
     oraculo_agent_base_url: str = "https://diiegoal-oraculo-agente-ia.hf.space"
+    oraculo_agent_admin_api_key: str = "change-this-agent-admin-key"
 
     session_secret_key: str = "change-this-session-secret-key"
     session_cookie_name: str = "oraculo_web_session"

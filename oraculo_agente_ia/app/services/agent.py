@@ -55,7 +55,13 @@ class AgentService:
             route=result["intent"],
             citations=result.get("citations", []),
             trace_id=result["trace_id"],
-            assistant_metadata={"memory_events": memory_events, "reflection_report": result.get("reflection_report", {})},
+            assistant_metadata={
+                "memory_events": memory_events,
+                "reflection_report": result.get("reflection_report", {}),
+                "conversation_state": result.get("conversation_state", {}),
+                "slot_requested": result.get("slot_requested"),
+                "llm_provider": result.get("llm_provider"),
+            },
         )
 
         prediction_result = result.get("tool_results", {}).get("prediction")
@@ -76,6 +82,8 @@ class AgentService:
         yield StreamEvent(event="accepted", data={"thread_id": payload.thread_id})
         response = self.invoke(payload=payload, current_user=current_user)
         yield StreamEvent(event="route", data={"route": response.route, "thread_id": response.thread_id})
+        if response.missing_fields:
+            yield StreamEvent(event="slot_requested", data={"field": response.missing_fields[0], "thread_id": response.thread_id})
         if response.prediction_result is not None:
             yield StreamEvent(event="tool_completed", data={"tool": "prediction_api", "prediction_id": response.prediction_result.prediction_id})
         if response.citations:

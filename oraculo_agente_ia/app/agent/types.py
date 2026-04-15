@@ -4,7 +4,7 @@ from typing import Any, Literal, TypedDict
 
 from pydantic import BaseModel, Field
 
-RouteName = Literal["prediction", "rag", "hybrid", "clarification", "unsafe"]
+RouteName = Literal["chat", "prediction", "rag", "hybrid", "clarification", "unsafe"]
 
 
 class IntentDecision(BaseModel):
@@ -61,3 +61,6 @@ class AgentState(TypedDict, total=False):
     response_mode: str
     trace_id: str
     confidence: float
+    conversation_state: dict[str, Any]
+    slot_requested: str | None
+    llm_provider: str | None

@@ -8,6 +8,7 @@ from typing import Any
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, HumanMessage
 from langgraph.store.memory import InMemoryStore
+from pydantic import BaseModel, Field
 from qdrant_client import QdrantClient, models
 
 from app.agent.model_gateway import ModelGateway
@@ -18,6 +19,14 @@ logger = logging.getLogger("oraculo_agent.memory")
 
 EMAIL_PATTERN = re.compile(r"\b[\w\.-]+@[\w\.-]+\.\w+\b")
 PHONE_PATTERN = re.compile(r"\b(?:\+?\d{1,3}[-.\s]?)?(?:\d{3}[-.\s]?){2,4}\d{2,4}\b")
+
+
+class MemoryExtractionItem(BaseModel):
+    content: str = Field(min_length=1, max_length=300)
+
+
+class MemoryExtractionResponse(BaseModel):
+    memories: list[MemoryExtractionItem] = Field(default_factory=list, max_length=3)
 
 
 class MemoryService:
@@ -103,7 +112,7 @@ class MemoryService:
                 },
             )
         except Exception as exc:
-            logger.warning("LangMem extraction failed and heuristics will be used: %s", exc)
+            logger.info("LangMem extraction failed and fallback extraction will be used: %s", exc)
             return []
 
         candidates: list[str] = []
@@ -117,12 +126,40 @@ class MemoryService:
                     break
         return candidates
 
+    def _llm_candidates(self, *, user_message: str, assistant_message: str) -> list[str]:
+        chat_model = self.model_gateway.chat_model
+        if chat_model is None:
+            return []
+        try:
+            structured_model = chat_model.with_structured_output(MemoryExtractionResponse)
+            response = structured_model.invoke(
+                [
+                    HumanMessage(
+                        content=(
+                            "Extrae solo recuerdos de largo plazo que sea util conservar del usuario. "
+                            "Sirven nombre preferido, preferencias estables, objetivos persistentes o datos de perfil "
+                            "explicitamente declarados. No guardes secretos, no guardes datos inferidos y no dupliques "
+                            "informacion trivial del turno.\n\n"
+                            f"Usuario: {user_message}\n"
+                            f"Asistente: {assistant_message}"
+                        )
+                    )
+                ]
+            )
+            return [item.content.strip() for item in response.memories if item.content.strip()]
+        except Exception as exc:
+            logger.info("LLM memory extraction fell back to heuristics: %s", exc)
+            return []
+
     def remember_from_interaction(self, *, user_id: str, thread_id: str, user_message: str, assistant_message: str) -> list[dict]:
         try:
             self._ensure_collection()
             candidates = self._langmem_candidates(
                 user_id=user_id,
                 thread_id=thread_id,
+                user_message=user_message,
+                assistant_message=assistant_message,
+            ) or self._llm_candidates(
                 user_message=user_message,
                 assistant_message=assistant_message,
             ) or self._heuristic_candidates(user_message)

@@ -6,7 +6,7 @@ from pydantic import ConfigDict, Field
 
 from app.schemas.common import BaseSchema, Citation, SafetyFlag
 
-RouteName = Literal["prediction", "rag", "hybrid", "clarification", "unsafe"]
+RouteName = Literal["chat", "prediction", "rag", "hybrid", "clarification", "unsafe"]
 
 
 class ChatRequest(BaseSchema):

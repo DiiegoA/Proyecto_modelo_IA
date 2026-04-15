@@ -15,6 +15,7 @@ class FakeGateway:
         self.login_calls: list[dict] = []
         self.me_calls: list[str] = []
         self.chat_calls: list[dict] = []
+        self.upload_calls: list[dict] = []
 
     def register(self, payload):
         self.register_calls.append(payload.model_dump())
@@ -53,13 +54,19 @@ class FakeGateway:
 
     def invoke_chat(self, *, token: str, payload: dict):
         self.chat_calls.append({"token": token, "payload": payload})
+        route = "chat" if "hola" in str(payload.get("message", "")).lower() else "prediction"
+        answer = (
+            "Hola, soy AdultBot, tu asistente IA. En que te puedo ayudar?"
+            if route == "chat"
+            else "La prediccion fue >50K."
+        )
         return {
             "thread_id": payload.get("thread_id") or "thread-1",
-            "route": "prediction",
-            "answer": "La prediccion fue >50K.",
+            "route": route,
+            "answer": answer,
             "citations": [],
             "missing_fields": [],
-            "prediction_result": {
+            "prediction_result": None if route == "chat" else {
                 "prediction_id": "pred-1",
                 "label": ">50K",
                 "probability": 0.88,
@@ -70,6 +77,42 @@ class FakeGateway:
             "confidence": 0.88,
             "safety_flags": [],
             "trace_id": "trace-1",
+        }
+
+    def upload_knowledge_document(self, *, token: str, file_name: str, file_bytes: bytes, content_type: str | None = None):
+        self.upload_calls.append(
+            {
+                "token": token,
+                "file_name": file_name,
+                "file_bytes": file_bytes,
+                "content_type": content_type,
+            }
+        )
+        return {
+            "file_name": file_name,
+            "source_path": f"knowledge_base/uploads/{file_name}",
+            "source_type": file_name.rsplit(".", 1)[-1],
+            "title": "Documento Manual",
+            "file_size_bytes": len(file_bytes),
+            "indexed_sources": 1,
+            "total_chunks": 1,
+            "status": "uploaded",
+        }
+
+    def list_knowledge_sources(self, *, token: str):
+        return {
+            "items": [
+                {
+                    "id": "source-1",
+                    "source_path": "knowledge_base/uploads/manual.md",
+                    "source_type": "md",
+                    "title": "Manual",
+                    "content_hash": "abc123",
+                    "status": "indexed",
+                    "chunk_count": 3,
+                    "last_indexed_at": "2026-04-14T10:00:00Z",
+                }
+            ]
         }
 
 

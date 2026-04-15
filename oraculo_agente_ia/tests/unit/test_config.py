@@ -29,3 +29,26 @@ def test_settings_create_runtime_directories(settings_factory):
     assert settings.knowledge_base_dir.exists()
     assert settings.resolved_qdrant_path.exists()
     assert settings.resolved_checkpoints_db_path.parent.exists()
+
+
+def test_settings_accept_chatgpt_aliases(monkeypatch):
+    monkeypatch.setenv("ORACULO_AGENT_CHATGPT_API_KEY", "alias-openai-key")
+    monkeypatch.setenv("ORACULO_AGENT_CHATGPT_CHAT_MODEL", "gpt-5.4-mini")
+    monkeypatch.setenv("ORACULO_AGENT_CHATGPT_EMBEDDING_MODEL", "text-embedding-3-small")
+    monkeypatch.setenv("ORACULO_AGENT_CHATGPT_TEMPERATURE", "0.2")
+    settings = Settings()
+
+    try:
+        assert settings.can_use_openai_models is True
+        assert settings.effective_openai_api_key == "alias-openai-key"
+        assert settings.effective_openai_chat_model == "gpt-5.4-mini"
+        assert settings.effective_openai_embedding_model == "text-embedding-3-small"
+        assert settings.effective_openai_temperature == 0.2
+    finally:
+        for name in (
+            "ORACULO_AGENT_CHATGPT_API_KEY",
+            "ORACULO_AGENT_CHATGPT_CHAT_MODEL",
+            "ORACULO_AGENT_CHATGPT_EMBEDDING_MODEL",
+            "ORACULO_AGENT_CHATGPT_TEMPERATURE",
+        ):
+            monkeypatch.delenv(name, raising=False)

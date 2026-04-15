@@ -10,7 +10,7 @@ from app.db.session import build_engine, build_session_factory, create_tables
 
 
 def sqlite_url(path: Path) -> str:
-    return path.resolve().as_uri().replace("file:///", "sqlite:///")
+    return f"sqlite:///{path.resolve().as_posix()}"
 
 
 def build_runtime_db(settings: Settings):

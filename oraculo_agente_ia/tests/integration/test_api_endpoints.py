@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import json
+from io import BytesIO
 
 import pytest
+from pypdf import PdfWriter
+from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
 
 
 FULL_PREDICTION_PAYLOAD = {
@@ -28,6 +31,29 @@ FULL_PREDICTION_NATURAL_MESSAGE = (
     "trabajo como Adm-clerical, mi relacion es Not-in-family, mi raza es White, tuve una ganancia "
     "de capital de 2174, una perdida de capital de 0, trabajo 40 horas por semana y naci en United-States."
 )
+
+
+def build_test_pdf_bytes(text: str) -> bytes:
+    writer = PdfWriter()
+    page = writer.add_blank_page(width=300, height=300)
+    font_dict = DictionaryObject()
+    font_dict.update(
+        {
+            NameObject("/Type"): NameObject("/Font"),
+            NameObject("/Subtype"): NameObject("/Type1"),
+            NameObject("/BaseFont"): NameObject("/Helvetica"),
+        }
+    )
+    page[NameObject("/Resources")] = DictionaryObject(
+        {NameObject("/Font"): DictionaryObject({NameObject("/F1"): font_dict})}
+    )
+    stream = DecodedStreamObject()
+    encoded_text = text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+    stream.set_data(f"BT /F1 18 Tf 72 200 Td ({encoded_text}) Tj ET".encode("utf-8"))
+    page[NameObject("/Contents")] = writer._add_object(stream)
+    buffer = BytesIO()
+    writer.write(buffer)
+    return buffer.getvalue()
 
 
 @pytest.mark.integration
@@ -87,7 +113,58 @@ def test_chat_invoke_prediction_with_missing_fields_requests_clarification(
     payload = response.json()
     assert payload["route"] == "prediction"
     assert payload["missing_fields"]
-    assert "faltan" in payload["answer"].lower()
+    assert payload["missing_fields"][0].lower() in payload["answer"].lower()
+    assert len(payload["missing_fields"]) > 1
+    assert "tipo de trabajo" in payload["answer"].lower()
+
+
+@pytest.mark.integration
+def test_chat_invoke_greeting_uses_conversational_route(
+    client_factory,
+    fake_oraculo_api_client,
+    fake_chat_model,
+    token_factory,
+):
+    with client_factory(
+        fake_client=fake_oraculo_api_client,
+        fake_chat_model=fake_chat_model,
+    ) as (client, settings):
+        headers = {"Authorization": f"Bearer {token_factory(settings)}"}
+        response = client.post(
+            "/api/v1/chat/invoke",
+            json={"message": "Hola"},
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["route"] == "chat"
+    assert "AdultBot" in payload["answer"]
+
+
+@pytest.mark.integration
+def test_chat_invoke_capabilities_question_stays_conversational(
+    client_factory,
+    fake_oraculo_api_client,
+    fake_chat_model,
+    token_factory,
+):
+    with client_factory(
+        fake_client=fake_oraculo_api_client,
+        fake_chat_model=fake_chat_model,
+    ) as (client, settings):
+        headers = {"Authorization": f"Bearer {token_factory(settings)}"}
+        response = client.post(
+            "/api/v1/chat/invoke",
+            json={"message": "Que sabes hacer?"},
+            headers=headers,
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["route"] == "chat"
+    assert "predic" in payload["answer"].lower()
+    assert "respaldo suficiente" not in payload["answer"].lower()
 
 
 @pytest.mark.integration
@@ -195,6 +272,139 @@ def test_chat_stream_emits_sse_events(client_factory, fake_oraculo_api_client, t
     assert "event: accepted" in body
     assert "event: route" in body
     assert "event: final" in body
+
+
+@pytest.mark.integration
+def test_chat_stream_emits_slot_requested_for_progressive_prediction(
+    client_factory,
+    fake_oraculo_api_client,
+    fake_chat_model,
+    token_factory,
+):
+    with client_factory(
+        fake_client=fake_oraculo_api_client,
+        fake_chat_model=fake_chat_model,
+    ) as (client, settings):
+        headers = {"Authorization": f"Bearer {token_factory(settings)}"}
+        with client.stream(
+            "POST",
+            "/api/v1/chat/stream",
+            json={"message": "Quiero una prediccion de ingresos"},
+            headers=headers,
+        ) as response:
+            body = "".join(chunk for chunk in response.iter_text())
+
+    assert response.status_code == 200
+    assert "event: slot_requested" in body
+
+
+@pytest.mark.integration
+def test_knowledge_upload_endpoint_stores_document_and_reindexes(
+    client_factory,
+    fake_oraculo_api_client,
+):
+    with client_factory(fake_client=fake_oraculo_api_client) as (client, settings):
+        upload_response = client.post(
+            "/api/v1/knowledge/upload",
+            headers={"X-Agent-Admin-Key": settings.admin_api_key},
+            files={"file": ("manual.md", b"# Manual\nDocumento nuevo para el RAG.", "text/markdown")},
+        )
+        sources_response = client.get(
+            "/api/v1/knowledge/sources",
+            headers={"X-Agent-Admin-Key": settings.admin_api_key},
+        )
+
+    assert upload_response.status_code == 200
+    upload_payload = upload_response.json()
+    assert upload_payload["status"] == "uploaded"
+    assert upload_payload["source_path"].endswith("knowledge_base/uploads/manual.md")
+    assert upload_payload["indexed_sources"] >= 1
+    assert sources_response.status_code == 200
+    source_paths = [item["source_path"] for item in sources_response.json()["items"]]
+    assert any(path.endswith("knowledge_base/uploads/manual.md") for path in source_paths)
+
+
+@pytest.mark.integration
+def test_knowledge_upload_endpoint_accepts_pdf_and_uses_upload_size_limit(
+    client_factory,
+    fake_oraculo_api_client,
+):
+    pdf_bytes = build_test_pdf_bytes("AdultBot PDF knowledge for RAG upload")
+
+    with client_factory(
+        fake_client=fake_oraculo_api_client,
+        max_request_size_bytes=120,
+        knowledge_upload_max_request_size_bytes=262_144,
+    ) as (client, settings):
+        upload_response = client.post(
+            "/api/v1/knowledge/upload",
+            headers={"X-Agent-Admin-Key": settings.admin_api_key},
+            files={"file": ("manual.pdf", pdf_bytes, "application/pdf")},
+        )
+        sources_response = client.get(
+            "/api/v1/knowledge/sources",
+            headers={"X-Agent-Admin-Key": settings.admin_api_key},
+        )
+
+    assert upload_response.status_code == 200
+    upload_payload = upload_response.json()
+    assert upload_payload["status"] == "uploaded"
+    assert upload_payload["source_type"] == "pdf"
+    assert upload_payload["source_path"].endswith("knowledge_base/uploads/manual.pdf")
+    assert upload_payload["total_chunks"] >= 1
+    assert sources_response.status_code == 200
+    source_paths = [item["source_path"] for item in sources_response.json()["items"]]
+    assert any(path.endswith("knowledge_base/uploads/manual.pdf") for path in source_paths)
+
+
+@pytest.mark.integration
+def test_prediction_progressive_flow_remembers_slots_across_turns(
+    client_factory,
+    fake_oraculo_api_client,
+    fake_chat_model,
+    token_factory,
+):
+    messages = [
+        "Quiero una prediccion de ingresos",
+        "Tengo 39 anos",
+        "Mi tipo de trabajo es Private",
+        "Mi fnlwgt es 77516",
+        "Estudie Bachelors",
+        "Mi education.num es 13",
+        "Mi estado civil es Never-married",
+        "Trabajo como Adm-clerical",
+        "Mi relacion es Not-in-family",
+        "Mi raza es White",
+        "Soy hombre",
+        "Mi capital.gain es 2174",
+        "Mi capital.loss es 0",
+        "Trabajo 40 horas por semana",
+        "Naci en United-States",
+    ]
+
+    with client_factory(
+        fake_client=fake_oraculo_api_client,
+        fake_chat_model=fake_chat_model,
+    ) as (client, settings):
+        headers = {"Authorization": f"Bearer {token_factory(settings)}"}
+        thread_id = None
+        responses = []
+
+        for message in messages:
+            payload = {"message": message}
+            if thread_id:
+                payload["thread_id"] = thread_id
+            response = client.post("/api/v1/chat/invoke", json=payload, headers=headers)
+            assert response.status_code == 200
+            data = response.json()
+            thread_id = data["thread_id"]
+            responses.append(data)
+
+    assert responses[0]["route"] == "prediction"
+    assert "edad" in responses[0]["answer"].lower()
+    assert "tipo de trabajo" in responses[1]["answer"].lower()
+    assert responses[-1]["prediction_result"]["label"] == ">50K"
+    assert len(fake_oraculo_api_client.predict_calls) == 1
 
 
 @pytest.mark.integration
