@@ -1,413 +1,1062 @@
-# Proyecto Oráculo
+# 🔮 Proyecto Oráculo
 
-## Qué es este repositorio de trabajo
+<p align="center">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white">
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-Backend-009688?logo=fastapi&logoColor=white">
+  <img alt="LangGraph" src="https://img.shields.io/badge/LangGraph-Agentic%20Workflow-121212">
+  <img alt="Qdrant" src="https://img.shields.io/badge/Qdrant-Vector%20Store-DC244C">
+  <img alt="SQLAlchemy" src="https://img.shields.io/badge/SQLAlchemy-ORM-D71F00?logo=sqlalchemy&logoColor=white">
+  <img alt="Docker" src="https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker&logoColor=white">
+  <img alt="License" src="https://img.shields.io/badge/Status-Workspace%20de%20desarrollo-0F172A">
+</p>
 
-Esta carpeta raíz reúne todo el ecosistema operativo del proyecto Oráculo. No es solo un backend ni solo un notebook de ciencia de datos: es el espacio donde conviven el entrenamiento analítico, la API REST de inferencia, el agente de IA reflexivo, la web de usuario final y los artefactos temporales que se generan al endurecer el notebook y llevarlo a producción.
+<p align="center">
+  <strong>Un workspace maestro para entrenamiento MLOps, exposición de inferencia, orquestación agentic y experiencia web unificada.</strong>
+</p>
 
-La idea central del proyecto es la siguiente:
+---
 
-1. Se diseña y valida el pipeline analítico en notebook.
-2. Ese trabajo se traduce a un artefacto utilizable en backend.
-3. La API REST expone la inferencia del modelo de forma autenticada.
-4. El agente de IA consume esa API para resolver predicciones y también responde preguntas documentales mediante RAG.
-5. La web conecta al usuario final con ambos servicios sin obligarlo a manipular tokens a mano.
+## ✨ Qué es este repositorio
 
-En otras palabras, esta carpeta raíz funciona como un **workspace maestro** donde cada subcarpeta representa una capa distinta del sistema.
+**Proyecto Oráculo** no es un solo backend ni una sola demo.  
+Es un ecosistema completo donde conviven cuatro capas principales:
 
-## Mapa general del sistema
+1. **La capa analítica y MLOps**, donde se entrena, valida y exporta el pipeline del modelo.
+2. **La capa API**, que convierte ese pipeline en un servicio HTTP autenticado, trazable y utilizable por otros consumidores.
+3. **La capa agentic**, que interpreta lenguaje natural, decide intenciones y combina predicción con recuperación documental.
+4. **La capa web**, que unifica la experiencia para el usuario final sin obligarlo a manipular tokens o llamar servicios manualmente.
+
+En la práctica, este repositorio reúne el ciclo completo:
+
+- limpieza, transformación y entrenamiento del modelo;
+- endurecimiento del puente notebook → producción;
+- autenticación, JWT, persistencia e historial de predicciones;
+- memoria conversacional, RAG y reflexión del agente;
+- una interfaz web lista para operar todo el stack desde un solo punto.
+
+---
+
+## 🧭 Visión general de la arquitectura
 
 ```mermaid
 flowchart LR
-    A["Notebook y flujo MLOps<br/>oraculo_api / EDA_For_All_Tree_clean.ipynb"] --> B["Artefactos de modelo<br/>mlops_activos"]
-    A --> C["API REST de inferencia<br/>oraculo_api"]
-    C --> D["Agente IA reflexivo<br/>oraculo_agente_ia"]
-    D --> E["Interfaz web de usuario<br/>oraculo_web"]
-    A --> F["Extracciones temporales de celdas<br/>_tmp_nb_cells"]
+    A["Notebook y flujo MLOps<br/>oraculo_api / EDA_For_All_Tree_clean.ipynb"]
+    B["Artefactos del modelo<br/>mlops_activos / pipeline_produccion.pkl"]
+    C["API REST de inferencia<br/>oraculo_api"]
+    D["Agente IA reflexivo<br/>oraculo_agente_ia"]
+    E["Interfaz web<br/>oraculo_web"]
+    F["Usuario final"]
+
+    A --> B
+    A --> C
+    B --> C
+    C --> D
+    C --> E
+    D --> E
+    E --> F
 ```
 
-## Estructura de la carpeta raíz
+---
 
-| Ruta | Rol dentro del proyecto |
-| --- | --- |
-| `oraculo_api/` | Backend principal de inferencia, autenticación, persistencia y endurecimiento del puente notebook -> producción. |
-| `oraculo_agente_ia/` | Servicio agentic que conversa, enruta intenciones, consulta RAG y solicita predicciones a `oraculo_api`. |
-| `oraculo_web/` | Frontend/backend liviano en FastAPI que da una experiencia web unificada al usuario final. |
-| `mlops_activos/` | Carpeta de artefactos generados, especialmente modelos serializados y activos de despliegue. |
-| `_tmp_nb_cells/` | Espacio técnico de trabajo para extraer, probar y resincronizar celdas complejas del notebook. |
-| `cell_focus_plan.txt` | Archivo auxiliar de planeación local para trabajo quirúrgico sobre celdas o flujos del notebook. |
-| `_plan_scan.txt` | Archivo temporal de escaneo o análisis del workspace. |
-| `mlops_pipeline_auditoria.log` | Log de auditoría y trazabilidad de ejecuciones MLOps o revisiones del pipeline. |
+## 🗂️ Mapa del repositorio
+
+```text
+Proyecto_modelo_IA/
+├── oraculo_api/
+│   ├── app/
+│   ├── alembic/
+│   ├── tests/
+│   ├── requirements.txt
+│   ├── .env.example
+│   ├── Dockerfile
+│   ├── README.md
+│   ├── adult.csv
+│   ├── compas-scores-raw.csv
+│   └── EDA_For_All_Tree_clean.ipynb
+├── oraculo_agente_ia/
+│   ├── app/
+│   ├── knowledge_base/
+│   ├── scripts/
+│   ├── tests/
+│   ├── requirements.txt
+│   ├── .env.example
+│   ├── Dockerfile
+│   └── README.md
+├── oraculo_web/
+│   ├── app/
+│   │   ├── static/
+│   │   ├── main.py
+│   │   ├── gateway.py
+│   │   ├── config.py
+│   │   └── schemas.py
+│   ├── tests/
+│   ├── requirements.txt
+│   ├── .env.example
+│   ├── Dockerfile
+│   └── README.md
+├── mlops_activos/
+├── _tmp_nb_cells/
+├── README.md
+└── artefactos y archivos auxiliares del workspace
+```
 
 ---
 
-## Descripción exhaustiva de cada carpeta
+## 🧱 Qué hace cada módulo
 
-### `oraculo_api/`
+### `oraculo_api/` — Backend de inferencia y seguridad
 
-Esta es la carpeta más importante desde el punto de vista de producción del modelo. Aquí vive la API REST que toma el trabajo del notebook y lo convierte en un servicio HTTP usable por otras capas del sistema.
+`oraculo_api` es la frontera de producción entre el notebook y cualquier consumidor externo.  
+Su responsabilidad no es solo devolver una predicción: también centraliza autenticación, persistencia, validación de payloads, auditoría de inferencias y disponibilidad operativa.
 
-No es simplemente un “wrapper” alrededor de un `.pkl`. Su responsabilidad es mucho más amplia:
+**Responsabilidades principales:**
 
-- exponer endpoints autenticados de predicción;
-- gestionar usuarios, login y JWT;
-- persistir historial de inferencias;
-- cargar artefactos del modelo;
-- servir de frontera estable entre el notebook y cualquier consumidor externo;
-- proteger el acceso a la lógica del modelo con validaciones, seguridad y contratos HTTP claros.
+- exponer endpoints REST versionados;
+- registrar usuarios y emitir JWT;
+- validar el payload del caso Adult Income;
+- cargar el artefacto de modelo configurado en `app/ml/pipeline_produccion.pkl`;
+- devolver predicciones con probabilidad, metadatos y trazabilidad;
+- guardar historial por usuario;
+- proteger el acceso con middlewares y contratos estrictos.
 
-#### Qué contiene esta carpeta en alto nivel
+**Subcapas internas:**
 
-| Ruta interna | Qué hace |
-| --- | --- |
-| `app/` | Código fuente del backend FastAPI. |
-| `alembic/` | Migraciones versionadas de base de datos. |
-| `tests/` | Suite de pruebas del backend HTTP, seguridad, dominios y modelo. |
-| `mlops_activos/` | Artefactos exportados para despliegue desde el backend o notebook. |
-| `.venv/` | Entorno virtual local del proyecto API. |
-| `.git/` | Repositorio Git propio de esta subaplicación. |
-
-#### Qué hace `oraculo_api/app/`
-
-La carpeta `app/` concentra la aplicación real. Está separada por capas, lo cual es importante porque evita mezclar HTTP, seguridad, persistencia y lógica de modelo.
-
-| Subcarpeta | Función |
-| --- | --- |
-| `app/api/` | Routers FastAPI, endpoints versionados, dependencias HTTP y composición del contrato REST. |
-| `app/core/` | Configuración, seguridad, middlewares, manejo de errores, logging y decisiones transversales. |
-| `app/db/` | Modelos ORM, sesión, base de datos y repositorios persistentes. |
-| `app/ml/` | Carga del artefacto, integración con el pipeline y clases auxiliares para inferencia. |
-| `app/schemas/` | DTOs, modelos Pydantic y contratos de entrada/salida. |
-| `app/services/` | Reglas de negocio que orquestan operaciones por encima de la capa HTTP. |
-
-#### Archivos importantes de `oraculo_api/`
-
-| Archivo | Función |
-| --- | --- |
-| `EDA_For_All_Tree_clean.ipynb` | Notebook maestro del pipeline MLOps, análisis, entrenamiento, calibración, fairness y exportación. |
-| `adult.csv` | Dataset clásico de Adult Census Income usado como flujo binario principal. |
-| `compas-scores-raw.csv` | Dataset usado para validar escenarios multiclase, especialmente con `ScoreText`. |
-| `oraculo.db` | Base de datos SQLite local del backend. |
-| `Dockerfile` | Contenerización del backend API. |
-| `requirements.txt` | Dependencias Python necesarias para levantar la API y su entorno de pruebas. |
-| `README.md` | Documentación específica de la API, endpoints y seguridad. |
-| `.env` / `.env.example` | Configuración local y plantilla de variables de entorno. |
-| `alembic.ini` | Configuración base de Alembic. |
-
-#### Rol operativo de `oraculo_api/` dentro del ecosistema
-
-Cuando el proyecto corre completo, esta carpeta ocupa el papel de **fuente de verdad** para la inferencia estructurada. Todo lo que sea:
-
-- autenticación de usuario;
-- emisión de tokens;
-- validación del payload de Adult Income;
-- cálculo de predicciones;
-- trazabilidad de solicitudes;
-- persistencia del historial;
-
-pasa por aquí.
-
-El agente y la web no reemplazan esta carpeta: la usan.
+- `app/api/`: routers y endpoints
+- `app/core/`: configuración, errores, middleware, logging y seguridad
+- `app/db/`: base ORM, sesión, modelos y repositorios
+- `app/services/`: lógica de negocio
+- `app/ml/`: cargador del artefacto y compatibilidad notebook → runtime
+- `app/schemas/`: contratos Pydantic
+- `alembic/`: migraciones
 
 ---
 
-### `oraculo_agente_ia/`
+### `oraculo_agente_ia/` — Capa agentic, RAG y memoria
 
-Esta carpeta contiene el backend del agente IA reflexivo. Aquí no vive el modelo tabular de Adult Income; aquí vive la lógica conversacional y agentic que interpreta lo que el usuario quiere hacer.
+`oraculo_agente_ia` es la capa inteligente del ecosistema.  
+No sustituye el backend clásico: lo orquesta.
 
-Su trabajo principal es decidir entre varios caminos:
+Recibe lenguaje natural, detecta si el usuario quiere:
 
-- si el usuario quiere una predicción;
-- si el usuario está haciendo una consulta documental;
-- si mezcla ambos casos;
-- si faltan datos;
-- si la petición es insegura o no tiene evidencia suficiente.
+- conversar,
+- pedir una predicción,
+- consultar documentación,
+- combinar predicción + explicación documental,
+- o si está haciendo una solicitud insegura.
 
-Esta carpeta funciona como una **capa de inteligencia y orquestación** encima de `oraculo_api`.
+Luego ejecuta un flujo stateful con **LangGraph**, consulta su base documental en **Qdrant**, recuerda contexto útil y, cuando corresponde, llama a `oraculo_api` para obtener una predicción real.
 
-#### Qué contiene esta carpeta en alto nivel
+**Responsabilidades principales:**
 
-| Ruta interna | Qué hace |
-| --- | --- |
-| `app/` | Código del agente, API de chat, orquestación, memoria, RAG e integraciones. |
-| `data/` | Estado local del agente, índices, checkpoints y almacenamiento auxiliar. |
-| `knowledge_base/` | Corpus curado que alimenta el RAG. |
-| `scripts/` | Scripts de mantenimiento, especialmente reindexación del conocimiento. |
-| `tests/` | Pruebas unitarias, integración, seguridad, resiliencia y contrato. |
-| `.venv/` | Entorno virtual local del agente. |
-| `.git/` | Repositorio Git propio de esta subaplicación. |
+- routing por intención;
+- extracción de campos de predicción;
+- gestión de `thread_id` y continuidad conversacional;
+- memoria corta y memoria semántica;
+- reindexado documental;
+- RAG con citas;
+- reflexión final de la respuesta antes de entregarla.
 
-#### Qué hace `oraculo_agente_ia/app/`
+**Subcapas internas:**
 
-| Subcarpeta | Función |
-| --- | --- |
-| `app/agent/` | Grafo agentic, router, critic reflexivo, parsing de predicción y tipos internos del workflow. |
-| `app/api/` | Endpoints FastAPI del chat, knowledge admin, threads y dependencias de autenticación. |
-| `app/clients/` | Clientes HTTP tipados para comunicarse con `oraculo_api` u otros servicios. |
-| `app/core/` | Configuración del agente, middlewares, errores, seguridad y settings del entorno. |
-| `app/db/` | Persistencia local del agente para hilos, checkpoints y runtime state. |
-| `app/integrations/` | Puentes opcionales o integraciones complementarias. |
-| `app/memory/` | Memoria a corto y largo plazo, redacción de PII y persistencia semántica. |
-| `app/rag/` | Ingesta, chunking, hashing, retrieval y mantenimiento del vector store. |
-| `app/schemas/` | Contratos Pydantic de chat, threads, health, knowledge y respuestas. |
-| `app/services/` | Coordinación de casos de uso del agente y fachada de negocio. |
-
-#### Archivos importantes de `oraculo_agente_ia/`
-
-| Archivo | Función |
-| --- | --- |
-| `Dockerfile` | Imagen del agente para despliegue local o en Hugging Face Spaces. |
-| `requirements.txt` | Dependencias de LangChain, LangGraph, FastAPI, Qdrant y testing. |
-| `pytest.ini` | Configuración de la suite de pruebas del agente. |
-| `README.md` | Documentación técnica propia del servicio agentic. |
-| `.env` / `.env.example` | Variables del agente, LLM, LangSmith, Qdrant y conexión a la API de inferencia. |
-
-#### Qué papel cumple el agente en la arquitectura
-
-Esta carpeta no reemplaza el backend clásico ni el notebook. Su rol es:
-
-- interpretar lenguaje natural;
-- decidir si el usuario está pidiendo una predicción o una explicación;
-- recuperar contexto documental con RAG;
-- solicitar a `oraculo_api` una predicción real cuando el caso lo requiere;
-- responder de forma más humana, explicativa y conversacional.
-
-En resumen, `oraculo_agente_ia/` es la capa que convierte un ecosistema técnico en una experiencia inteligente.
+- `app/agent/`: grafo, routing, reflexión, contrato de predicción, tipos
+- `app/api/`: endpoints de chat, threads, health y knowledge admin
+- `app/clients/`: cliente hacia `oraculo_api`
+- `app/memory/`: persistencia y búsqueda semántica de recuerdos
+- `app/rag/`: indexación y retrieval
+- `app/services/`: fachada de negocio del agente
+- `app/db/`: hilos, mensajes, memorias y fuentes documentales
+- `scripts/`: tareas operativas, como reindexado manual
 
 ---
 
-### `oraculo_web/`
+### `oraculo_web/` — Experiencia web unificada
 
-Esta carpeta contiene la capa web para el usuario final. No es un frontend estático puro ni un backend pesado; es una aplicación FastAPI ligera que resuelve la experiencia de acceso, sesión y chat de forma integrada.
+`oraculo_web` es la capa de experiencia.  
+No es un frontend aislado ni un backend pesado: es una web servida con **FastAPI** que actúa como gateway y controla la sesión del usuario.
 
-Su función principal es evitar que el usuario tenga que:
+Su función es evitar que la persona final tenga que:
 
-- autenticarse manualmente por Swagger;
-- copiar `access_token` a mano;
-- llamar por separado a la API del modelo y al agente.
+- loguearse por Swagger,
+- copiar tokens,
+- llamar endpoints manualmente,
+- o alternar entre la API y el agente.
 
-#### Qué contiene esta carpeta en alto nivel
+**Responsabilidades principales:**
 
-| Ruta interna | Qué hace |
-| --- | --- |
-| `app/` | Aplicación web FastAPI, rutas HTML/JS y lógica gateway. |
-| `tests/` | Pruebas del flujo web, login, sesión y proxy de chat. |
-| `.venv/`, `.venv_run/`, `.venv_test/` | Entornos de trabajo usados durante desarrollo, ejecución y pruebas. |
+- registrar e iniciar sesión contra `oraculo_api`;
+- guardar la sesión en cookie server-side;
+- reenviar el bearer al agente;
+- exponer una interfaz “chat-first” con AdultBot;
+- mantener el `thread_id` en `localStorage`;
+- permitir carga de documentos al knowledge base;
+- mostrar respuestas de chat, predicción, RAG o híbridas.
 
-#### Qué hace `oraculo_web/app/`
+**Subcapas internas:**
 
-| Subcarpeta / archivo | Función |
-| --- | --- |
-| `app/static/` | HTML, CSS y JavaScript de la interfaz que consume la web. |
-| `app/main.py` | App FastAPI, endpoints, sesión y proxy de autenticación/chat. |
-| `app/config.py` | Variables de entorno y configuración de la web. |
-| `app/gateway.py` | Cliente/gateway hacia `oraculo_api` y `oraculo_agente_ia`. |
-| `app/schemas.py` | Esquemas de entrada/salida de la capa web. |
-
-#### Rol operativo de `oraculo_web/`
-
-`oraculo_web/` une la experiencia humana con los servicios backend. El flujo es:
-
-1. el usuario se registra o hace login;
-2. la web llama a `oraculo_api`;
-3. la web conserva la sesión;
-4. cuando el usuario escribe en el chat, reenvía su bearer al agente;
-5. el agente decide si debe consultar la API del modelo o el RAG.
-
-Es, en la práctica, la **puerta de entrada amigable** del proyecto.
+- `app/main.py`: app FastAPI y endpoints internos de la web
+- `app/gateway.py`: proxy hacia `oraculo_api` y `oraculo_agente_ia`
+- `app/config.py`: settings
+- `app/schemas.py`: contratos internos
+- `app/static/`: `index.html`, `app.js`, `styles.css`
 
 ---
 
-### `mlops_activos/`
+## 🔄 Flujo operativo end-to-end
 
-Esta carpeta raíz almacena artefactos serializados y salidas de producción o preproducción, especialmente cuando el notebook o las fases de ensamblaje exportan modelos.
+### 1) Entrenamiento y endurecimiento del modelo
 
-En este workspace hoy contiene:
+El trabajo analítico parte del notebook `EDA_For_All_Tree_clean.ipynb`, junto con datasets como `adult.csv` y `compas-scores-raw.csv`.
 
-| Archivo | Función |
-| --- | --- |
-| `oraculo_lightgbm.pkl` | Artefacto serializado de modelo usado como salida del flujo MLOps. |
+En esta capa se define:
 
-#### Qué representa esta carpeta
-
-No es código fuente. Es una carpeta de **resultado**. Normalmente aquí viven:
-
-- modelos entrenados;
-- pipelines exportados;
-- manifiestos de modelo;
-- activos listos para despliegue;
-- salidas reproducibles del pipeline.
-
-Por esa razón, en un `.gitignore` raíz suele tratarse como carpeta generada o al menos como carpeta que debe controlarse cuidadosamente.
+- limpieza y normalización;
+- ingeniería de variables;
+- artefactos auxiliares;
+- ensamblaje del pipeline de producción;
+- y serialización del modelo para consumo posterior.
 
 ---
 
-### `_tmp_nb_cells/`
+### 2) Exposición del modelo vía `oraculo_api`
 
-Esta carpeta es técnica y muy importante durante el trabajo de endurecimiento del notebook. Su objetivo no es producción final sino facilitar cirugía fina sobre `EDA_For_All_Tree_clean.ipynb`.
+Una vez endurecido el flujo, `oraculo_api`:
 
-Cuando el notebook es muy grande, editarlo directamente como JSON es incómodo y frágil. Esta carpeta resuelve eso extrayendo celdas a archivos `.py` independientes para poder:
-
-- leerlas más cómodamente;
-- probarlas aisladas;
-- hacer parches más seguros;
-- resincronizarlas luego al notebook principal.
-
-#### Qué contiene
-
-| Tipo de archivo | Función |
-| --- | --- |
-| `cell_106.py`, `cell_123.py`, `cell_130.py`, etc. | Extracciones de celdas concretas del notebook para edición y validación aislada. |
-| `validation_*.json` | Resultados de validaciones, smoke tests o comparativas de corridas. |
-| `__pycache__/` | Caché Python local. |
-
-#### Por qué existe esta carpeta
-
-Su valor principal es operativo:
-
-- reduce el riesgo de romper un notebook monolítico;
-- permite comparar versiones de una celda compleja;
-- da trazabilidad de validaciones rápidas sobre flujos como 18.3, 19.x o 20.1;
-- desacopla el trabajo de depuración del archivo `.ipynb` crudo.
-
-No es una carpeta pensada para despliegue. Es una **zona de trabajo técnico**.
+- carga el modelo al iniciar;
+- registra un usuario técnico admin opcional si así se configura;
+- levanta la base local o remota;
+- expone endpoints de auth, health y predicción;
+- registra cada inferencia con `request_id`, IP, latencia, hash del payload y versión del modelo.
 
 ---
 
-## Descripción de los archivos raíz no agrupados en carpeta
+### 3) Orquestación conversacional vía `oraculo_agente_ia`
 
-### `cell_focus_plan.txt`
+Cuando el usuario conversa con AdultBot:
 
-Archivo auxiliar de planeación. Normalmente se usa para dejar por escrito en qué celdas o fases del notebook conviene concentrar el trabajo, qué dependencias arrastran y qué problemas se están atacando.
-
-### `_plan_scan.txt`
-
-Archivo auxiliar de análisis o escaneo del workspace. Suele servir como apoyo temporal cuando se está revisando una estructura grande y se necesita conservar un mapa intermedio del trabajo.
-
-### `mlops_pipeline_auditoria.log`
-
-Log de auditoría del pipeline. Es útil para:
-
-- reconstruir qué pasó en una corrida;
-- inspeccionar tiempos o decisiones;
-- revisar eventos de entrenamiento, calibración o ensamblaje;
-- comparar salidas cuando se corrigen celdas del notebook.
+- el agente carga el contexto del hilo;
+- consulta memorias previas;
+- decide la intención principal;
+- si es predicción, reúne slots faltantes;
+- si es pregunta documental, usa RAG;
+- si es híbrido, combina ambos;
+- luego pasa la respuesta por un critic de reflexión;
+- y persiste mensajes, metadatos y memoria semántica.
 
 ---
 
-## Cómo se relacionan entre sí las carpetas
+### 4) Experiencia final vía `oraculo_web`
 
-La forma más fácil de entender este workspace es verlo como una cadena de capas:
+La web:
 
-### 1. Capa analítica y de entrenamiento
-
-Aquí vive el notebook y su endurecimiento:
-
-- `oraculo_api/EDA_For_All_Tree_clean.ipynb`
-- `_tmp_nb_cells/`
-- `mlops_activos/`
-
-Esta capa define cómo se limpia, transforma, calibra, evalúa y exporta el modelo.
-
-### 2. Capa de servicio de inferencia
-
-La representa `oraculo_api/`.
-
-Aquí el modelo se vuelve un servicio HTTP autenticado y trazable.
-
-### 3. Capa agentic y conversacional
-
-La representa `oraculo_agente_ia/`.
-
-Aquí la lógica ya no es “solo predecir”, sino interpretar intención, consultar conocimiento y decidir si debe llamar o no al backend de inferencia.
-
-### 4. Capa de experiencia de usuario
-
-La representa `oraculo_web/`.
-
-Aquí la complejidad técnica queda detrás de una interfaz unificada para registro, login y conversación.
+- autentica al usuario contra `oraculo_api`;
+- almacena la sesión;
+- reenvía el token al agente;
+- presenta quick actions y una UI visual;
+- renderiza predicciones, citas y flags;
+- y mantiene el hilo conversacional entre turnos.
 
 ---
 
-## Flujo típico de trabajo dentro de esta carpeta raíz
+## 🚀 Cómo levantar el proyecto completo
 
-Un flujo realista de desarrollo en este workspace suele verse así:
+> Este repositorio no usa un único `requirements.txt` raíz.  
+> Cada submódulo instala sus propias dependencias porque cada servicio tiene responsabilidades distintas.
 
-1. Se ajusta una fase del notebook en `oraculo_api/EDA_For_All_Tree_clean.ipynb`.
-2. Si la celda es compleja, se extrae a `_tmp_nb_cells/` para trabajarla con más seguridad.
-3. Se validan artefactos y se exporta un modelo a `mlops_activos/`.
-4. `oraculo_api/` consume ese artefacto o su contrato asociado.
-5. `oraculo_agente_ia/` se integra con la API para resolver predicciones desde lenguaje natural.
-6. `oraculo_web/` expone todo al usuario final en una sola experiencia.
+### Requisitos previos
 
----
-
-## Qué sí es código fuente y qué no
-
-### Código fuente principal
-
-- `oraculo_api/app/`
-- `oraculo_agente_ia/app/`
-- `oraculo_web/app/`
-
-### Activos de entrenamiento o soporte analítico
-
-- `oraculo_api/EDA_For_All_Tree_clean.ipynb`
-- `oraculo_api/adult.csv`
-- `oraculo_api/compas-scores-raw.csv`
-
-### Salidas generadas o temporales
-
-- `mlops_activos/`
-- `_tmp_nb_cells/validation_*.json`
-- `mlops_pipeline_auditoria.log`
-- bases SQLite locales
-- entornos virtuales
+- Python **3.11+**
+- `pip`
+- conexión de red para instalaciones
+- opcionalmente Docker
+- opcionalmente claves LLM para el agente
 
 ---
 
-## Recomendación de lectura para orientarse rápido
+## 🧪 Orden recomendado de arranque
 
-Si una persona nueva entra a esta carpeta, el mejor orden para entender el proyecto es:
+Para levantar el stack completo de forma local, el orden recomendado es:
 
-1. `oraculo_api/README.md`
-2. `oraculo_agente_ia/README.md`
-3. `oraculo_web/README.md`
-4. luego volver a este `README.md` para ver la relación global entre módulos
+1. `oraculo_api`
+2. `oraculo_agente_ia`
+3. `oraculo_web`
 
-Si el foco es puramente analítico o MLOps, entonces el orden recomendado cambia:
+Esto es importante porque:
+
+- el agente depende de la API de inferencia;
+- la web depende de la API y del agente;
+- si uno de los servicios upstream no está listo, el siguiente se degradará o fallará.
+
+---
+
+# 1️⃣ Instalación y ejecución de `oraculo_api`
+
+## Dependencias declaradas en `oraculo_api/requirements.txt`
+
+### API / Runtime
+
+| Paquete            | Rol                                        |
+| ------------------ | ------------------------------------------ |
+| `fastapi`          | framework principal de la API              |
+| `uvicorn`          | servidor ASGI                              |
+| `httptools`        | aceleración del parser HTTP                |
+| `watchfiles`       | recarga en desarrollo                      |
+| `websockets`       | soporte de transporte en el stack ASGI     |
+| `python-multipart` | manejo de formularios y payloads multipart |
+
+### Configuración / Seguridad
+
+| Paquete             | Rol                         |
+| ------------------- | --------------------------- |
+| `bcrypt`            | hashing de contraseñas      |
+| `PyJWT`             | emisión y validación de JWT |
+| `pydantic`          | validación de contratos     |
+| `pydantic-settings` | settings por entorno        |
+| `python-dotenv`     | carga de `.env`             |
+
+### Base de datos / ORM / Migraciones
+
+| Paquete      | Rol                     |
+| ------------ | ----------------------- |
+| `SQLAlchemy` | ORM principal           |
+| `alembic`    | migraciones versionadas |
+
+### Machine Learning / Data
+
+| Paquete        | Rol                             |
+| -------------- | ------------------------------- |
+| `joblib`       | carga del artefacto serializado |
+| `lightgbm`     | backend del modelo              |
+| `numpy`        | cómputo numérico                |
+| `pandas`       | manipulación tabular            |
+| `scikit-learn` | pipeline de ML                  |
+| `scipy`        | utilidades científicas          |
+
+### Testing
+
+| Paquete          | Rol                               |
+| ---------------- | --------------------------------- |
+| `httpx`          | cliente HTTP y soporte de testing |
+| `pytest`         | framework de pruebas              |
+| `pytest-asyncio` | soporte async en tests            |
+
+## Instalación
+
+### Windows PowerShell
+
+```powershell
+cd .\oraculo_api
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+copy .env.example .env
+```
+
+### Linux / macOS
+
+```bash
+cd oraculo_api
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+```
+
+## Variables importantes de entorno
+
+- `ORACULO_DATABASE_URL`
+- `ORACULO_MODEL_PATH`
+- `ORACULO_JWT_SECRET_KEY`
+- `ORACULO_ALLOWED_HOSTS`
+- `ORACULO_CORS_ALLOW_ORIGINS`
+- `ORACULO_MAX_REQUEST_SIZE_BYTES`
+- `ORACULO_RATE_LIMIT_ENABLED`
+- `ORACULO_RATE_LIMIT_REQUESTS`
+- `ORACULO_RATE_LIMIT_WINDOW_SECONDS`
+- `ORACULO_DOCS_ENABLED`
+- `ORACULO_AUTO_SEED_ADMIN`
+- `ORACULO_SEED_ADMIN_EMAIL`
+- `ORACULO_SEED_ADMIN_PASSWORD`
+
+## Migraciones
+
+```bash
+alembic upgrade head
+```
+
+## Arranque local
+
+```bash
+uvicorn app.main:app --reload
+```
+
+### URL por defecto
+
+- API: `http://127.0.0.1:8000`
+- Swagger: `http://127.0.0.1:8000/docs`
+
+---
+
+# 2️⃣ Instalación y ejecución de `oraculo_agente_ia`
+
+## Dependencias declaradas en `oraculo_agente_ia/requirements.txt`
+
+### API / Runtime
+
+| Paquete            | Rol                       |
+| ------------------ | ------------------------- |
+| `fastapi`          | framework HTTP del agente |
+| `uvicorn`          | servidor ASGI             |
+| `httptools`        | parser HTTP               |
+| `watchfiles`       | recarga en desarrollo     |
+| `websockets`       | soporte ASGI              |
+| `sse-starlette`    | streaming SSE             |
+| `python-multipart` | uploads multipart         |
+
+### Configuración / Seguridad / HTTP
+
+| Paquete             | Rol                                    |
+| ------------------- | -------------------------------------- |
+| `pydantic`          | contratos y validación                 |
+| `pydantic-settings` | settings                               |
+| `python-dotenv`     | carga de variables                     |
+| `PyJWT`             | validación local del token del usuario |
+| `httpx`             | cliente HTTP hacia otros servicios     |
+
+### Database / Storage
+
+| Paquete         | Rol                     |
+| --------------- | ----------------------- |
+| `SQLAlchemy`    | persistencia local      |
+| `aiosqlite`     | soporte SQLite async    |
+| `qdrant-client` | acceso al vector store  |
+| `pypdf`         | extracción de texto PDF |
+
+### Ecosistema LangChain / Agentic
+
+| Paquete                       | Rol                           |
+| ----------------------------- | ----------------------------- |
+| `langchain`                   | abstracciones LLM             |
+| `langgraph`                   | workflow stateful             |
+| `langgraph-checkpoint-sqlite` | persistencia de checkpoints   |
+| `langchain-google-genai`      | integración con Gemini        |
+| `langchain-openai`            | integración OpenAI/compatible |
+| `langchain-qdrant`            | vector store en Qdrant        |
+| `langchain-text-splitters`    | chunking                      |
+| `langserve`                   | endpoints debug/playground    |
+| `langmem`                     | extracción de memoria         |
+| `langsmith`                   | trazabilidad opcional         |
+
+### Testing / Quality
+
+| Paquete          | Rol                           |
+| ---------------- | ----------------------------- |
+| `pytest`         | pruebas                       |
+| `pytest-asyncio` | pruebas async                 |
+| `hypothesis`     | testing basado en propiedades |
+| `schemathesis`   | validación de contratos HTTP  |
+
+## Instalación
+
+### Windows PowerShell
+
+```powershell
+cd .\oraculo_agente_ia
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+copy .env.example .env
+```
+
+### Linux / macOS
+
+```bash
+cd oraculo_agente_ia
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+```
+
+## Variables importantes de entorno
+
+### Runtime y almacenamiento
+
+- `ORACULO_AGENT_DATABASE_URL`
+- `ORACULO_AGENT_CHECKPOINTS_DB_PATH`
+- `ORACULO_AGENT_QDRANT_PATH`
+- `ORACULO_AGENT_QDRANT_COLLECTION_NAME`
+- `ORACULO_AGENT_QDRANT_MEMORY_COLLECTION_NAME`
+
+### LLM / embeddings
+
+- `ORACULO_AGENT_GOOGLE_API_KEY`
+- `ORACULO_AGENT_GOOGLE_CHAT_MODEL`
+- `ORACULO_AGENT_GOOGLE_EMBEDDING_MODEL`
+- `ORACULO_AGENT_OPENAI_API_KEY`
+- `ORACULO_AGENT_OPENAI_CHAT_MODEL`
+- `ORACULO_AGENT_OPENAI_EMBEDDING_MODEL`
+
+### Comportamiento conversacional
+
+- `ORACULO_AGENT_ASSISTANT_NAME`
+- `ORACULO_AGENT_CHAT_HISTORY_WINDOW`
+- `ORACULO_AGENT_PREDICTION_FIELDS_PER_TURN`
+
+### Integración con `oraculo_api`
+
+- `ORACULO_AGENT_ORACULO_API_BASE_URL`
+- `ORACULO_AGENT_ORACULO_API_TIMEOUT_SECONDS`
+- `ORACULO_AGENT_ORACULO_API_JWT_SECRET_KEY`
+- `ORACULO_AGENT_ORACULO_API_JWT_ALGORITHM`
+- `ORACULO_AGENT_ORACULO_API_VERIFY_REMOTE_USER`
+- `ORACULO_AGENT_ORACULO_API_SERVICE_EMAIL`
+- `ORACULO_AGENT_ORACULO_API_SERVICE_PASSWORD`
+
+### Seguridad / admin / RAG
+
+- `ORACULO_AGENT_ADMIN_API_KEY`
+- `ORACULO_AGENT_ALLOWED_HOSTS`
+- `ORACULO_AGENT_CORS_ALLOW_ORIGINS`
+- `ORACULO_AGENT_DOCS_ENABLED`
+- `ORACULO_AGENT_MAX_REQUEST_SIZE_BYTES`
+- `ORACULO_AGENT_KNOWLEDGE_UPLOAD_MAX_REQUEST_SIZE_BYTES`
+- `ORACULO_AGENT_RATE_LIMIT_ENABLED`
+- `ORACULO_AGENT_REDACT_PII`
+- `ORACULO_AGENT_RAG_TOP_K`
+- `ORACULO_AGENT_RAG_CHUNK_SIZE`
+- `ORACULO_AGENT_RAG_CHUNK_OVERLAP`
+- `ORACULO_AGENT_AUTO_REINDEX_ON_STARTUP`
+- `ORACULO_AGENT_ENABLE_LANGSERVE`
+- `ORACULO_AGENT_LANGSMITH_TRACING`
+
+## Arranque local
+
+```bash
+uvicorn app.main:app --reload
+```
+
+### URL por defecto
+
+- Agente: `http://127.0.0.1:8000`
+- Swagger: `http://127.0.0.1:8000/docs`
+
+## Reindexado manual de conocimiento
+
+```bash
+python scripts/reindex_knowledge.py
+```
+
+---
+
+# 3️⃣ Instalación y ejecución de `oraculo_web`
+
+## Dependencias declaradas en `oraculo_web/requirements.txt`
+
+| Paquete             | Rol                                |
+| ------------------- | ---------------------------------- |
+| `fastapi`           | servidor web                       |
+| `uvicorn`           | ASGI server                        |
+| `httpx`             | cliente hacia API y agente         |
+| `itsdangerous`      | soporte subyacente de firma/sesión |
+| `python-multipart`  | subida de archivos                 |
+| `pydantic`          | validación                         |
+| `pydantic-settings` | configuración                      |
+| `python-dotenv`     | `.env`                             |
+| `pytest`            | pruebas                            |
+
+## Instalación
+
+### Windows PowerShell
+
+```powershell
+cd .\oraculo_web
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+copy .env.example .env
+```
+
+### Linux / macOS
+
+```bash
+cd oraculo_web
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+```
+
+## Variables importantes de entorno
+
+- `ORACULO_WEB_ORACULO_API_BASE_URL`
+- `ORACULO_WEB_ORACULO_AGENT_BASE_URL`
+- `ORACULO_WEB_ORACULO_AGENT_ADMIN_API_KEY`
+- `ORACULO_WEB_REQUEST_TIMEOUT_SECONDS`
+- `ORACULO_WEB_SESSION_SECRET_KEY`
+- `ORACULO_WEB_SESSION_COOKIE_NAME`
+- `ORACULO_WEB_SESSION_COOKIE_HTTPS_ONLY`
+- `ORACULO_WEB_SESSION_MAX_AGE_SECONDS`
+- `ORACULO_WEB_ALLOWED_HOSTS`
+
+## Arranque local
+
+```bash
+uvicorn app.main:app --reload --port 3000
+```
+
+### URL por defecto
+
+- Web: `http://127.0.0.1:3000`
+
+---
+
+## 🧠 Qué hace realmente el código de cada capa
+
+# `oraculo_api` en detalle
+
+### Arranque (`app/main.py`)
+
+Al arrancar, la API:
+
+- carga configuración;
+- construye engine y `session_factory`;
+- crea tablas si así está configurado;
+- ejecuta seed de admin si aplica;
+- carga el modelo mediante `ModelManager`;
+- monta middlewares de:
+  - GZip,
+  - CORS,
+  - Trusted Hosts,
+  - headers de seguridad,
+  - máximo tamaño de request,
+  - rate limit,
+  - contexto de request con `request_id`.
+
+### Endpoints principales
+
+- `GET /`
+- `GET /api/v1/health/live`
+- `GET /api/v1/health/ready`
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login`
+- `GET /api/v1/auth/me`
+- `POST /api/v1/predictions`
+- `GET /api/v1/predictions`
+- `GET /api/v1/predictions/{prediction_id}`
+
+### Seguridad
+
+La API implementa:
+
+- JWT con `PyJWT`
+- hashing `bcrypt`
+- DTOs con `extra="forbid"`
+- `TrustedHostMiddleware`
+- `Content-Security-Policy`
+- `X-Content-Type-Options`
+- `X-Frame-Options` condicional
+- `Referrer-Policy`
+- `Permissions-Policy`
+- `Cache-Control`
+- rate limiting en memoria
+- rechazo por payload demasiado grande
+- errores controlados y envelope homogéneo
+
+### Persistencia
+
+Modelos principales:
+
+- `users`
+- `prediction_logs`
+
+Se guarda, entre otros:
+
+- usuario
+- request id
+- IP
+- label
+- probability
+- latency
+- model_version
+- payload_hash
+- input_payload
+- normalized_payload
+
+### Compatibilidad notebook → producción
+
+El `ModelManager` registra un “pickle bridge” para que el runtime pueda cargar el pipeline serializado y apoyarse en `PipelineProduccionMLOps`.  
+Además, si faltan artefactos exportados por el notebook, intenta reconstruir algunos a partir de `adult.csv`.
+
+---
+
+# `oraculo_agente_ia` en detalle
+
+### Arranque (`app/main.py`)
+
+Al iniciar, el agente:
+
+- crea engine y `session_factory`;
+- crea tablas;
+- inicializa `QdrantClient`;
+- abre `SqliteSaver` para checkpoints de LangGraph;
+- crea `ModelGateway`;
+- crea `OraculoApiClient`;
+- crea `KnowledgeService`, `MemoryService`, `ThreadService`;
+- ensambla `AgentWorkflow`;
+- expone `AgentService`, `KnowledgeAdminService` y `HealthService`;
+- opcionalmente reindexa la base documental;
+- opcionalmente monta rutas debug de LangServe.
+
+### Grafo principal (`app/agent/graph.py`)
+
+El workflow define nodos para:
+
+- `load_context`
+- `route_intent`
+- `chat`
+- `prediction`
+- `rag`
+- `hybrid`
+- `clarification`
+- `unsafe`
+- `reflection`
+
+Flujo:
+
+```mermaid
+flowchart TD
+    A[load_context] --> B[route_intent]
+    B --> C[chat]
+    B --> D[prediction]
+    B --> E[rag]
+    B --> F[hybrid]
+    B --> G[clarification]
+    B --> H[unsafe]
+    C --> I[reflection]
+    D --> I
+    E --> I
+    F --> I
+    G --> I
+    H --> I
+```
+
+### Routing de intención
+
+El router combina:
+
+- decisión LLM estructurada cuando hay cerebro disponible;
+- heurísticas por keywords y patrones;
+- continuidad del estado de conversación;
+- y datos extraídos del turno actual.
+
+Rutas posibles:
+
+- `chat`
+- `prediction`
+- `rag`
+- `hybrid`
+- `clarification`
+- `unsafe`
+
+### Predicción conversacional
+
+El agente puede:
+
+- recibir un JSON completo;
+- extraer campos desde texto natural;
+- extraer pares `clave: valor`;
+- fusionar slots con el historial del hilo;
+- detectar qué falta;
+- pedir pocos datos por turno;
+- y cuando el payload está completo, llamar a `oraculo_api`.
+
+### RAG
+
+`KnowledgeService`:
+
+- construye o asegura la colección de Qdrant;
+- genera fuentes auxiliares como un snapshot OpenAPI y un glosario del contrato de predicción;
+- lee documentos soportados (`.md`, `.txt`, `.json`, `.csv`, `.pdf`);
+- trocea con `RecursiveCharacterTextSplitter`;
+- vectoriza con embeddings;
+- persiste metadatos de fuentes en SQLite;
+- y permite retrieval por similitud con score.
+
+### Memoria
+
+`MemoryService`:
+
+- redacta PII sensible opcionalmente;
+- usa heurísticas, extracción LLM o LangMem;
+- guarda recuerdos en SQLite;
+- indexa los recuerdos redacted en Qdrant;
+- y busca recuerdos relevantes por usuario.
+
+### Cliente hacia `oraculo_api`
+
+`OraculoApiClient` puede:
+
+- autenticar cuenta técnica;
+- validar el token del usuario remoto;
+- pedir predicciones;
+- renovar token técnico si expira;
+- y consultar health del servicio upstream.
+
+### Endpoints principales
+
+- `GET /`
+- `GET /api/v1/health/live`
+- `GET /api/v1/health/ready`
+- `POST /api/v1/chat/invoke`
+- `POST /api/v1/chat/stream`
+- `GET /api/v1/threads/{thread_id}`
+- `GET /api/v1/knowledge/sources`
+- `POST /api/v1/knowledge/reindex`
+- `POST /api/v1/knowledge/upload`
+
+---
+
+# `oraculo_web` en detalle
+
+### Arranque (`app/main.py`)
+
+La web:
+
+- crea la app FastAPI;
+- monta `SessionMiddleware`;
+- monta `TrustedHostMiddleware`;
+- sirve `/static`;
+- maneja errores de gateway;
+- expone rutas internas para auth, session, chat y knowledge.
+
+### Gateway (`app/gateway.py`)
+
+`OraculoGateway` es un proxy controlado hacia los otros servicios.
+
+Puede:
+
+- registrar usuario en `oraculo_api`;
+- iniciar sesión en `oraculo_api`;
+- consultar `/auth/me`;
+- enviar mensajes al agente;
+- listar fuentes del knowledge base;
+- subir documentos al RAG usando `X-Agent-Admin-Key`.
+
+Además:
+
+- normaliza errores upstream;
+- protege contra payloads JSON inválidos;
+- encapsula timeouts y errores de transporte.
+
+### Frontend estático
+
+#### `index.html`
+
+La UI organiza el workspace en:
+
+- **topbar** de contexto del producto,
+- **panel lateral** de sesión,
+- **panel lateral** de capacidades,
+- **panel lateral** de carga de documentos,
+- **panel central** de conversación.
+
+#### `app.js`
+
+La lógica del frontend:
+
+- consulta la sesión al cargar;
+- gestiona login y registro;
+- mantiene `threadId` en `localStorage`;
+- envía prompts al backend web;
+- renderiza mensajes del usuario y del agente;
+- muestra tarjetas de predicción;
+- muestra citas de RAG;
+- muestra flags de seguridad;
+- permite quick actions;
+- permite subir archivos al knowledge base.
+
+#### `styles.css`
+
+El estilo implementa:
+
+- layout responsive;
+- glassmorphism suave;
+- cards, chips y badges;
+- tonos distintos por ruta;
+- UI orientada a workspace;
+- toasts visuales;
+- composición centrada en conversación + panel lateral.
+
+---
+
+## 🔐 Seguridad transversal del proyecto
+
+### En `oraculo_api`
+
+- JWT
+- bcrypt
+- validación fuerte
+- Trusted Hosts
+- CSP
+- payload max size
+- rate limit
+- errores controlados
+
+### En `oraculo_agente_ia`
+
+- bearer token
+- validación remota opcional del usuario
+- llave admin para knowledge endpoints
+- guardrails por ruta `unsafe`
+- reflexión final de respuesta
+- redacción de PII
+- limits por tamaño de request y uploads
+
+### En `oraculo_web`
+
+- sesión firmada del lado servidor
+- cookie configurable
+- trusted hosts
+- no exposición directa de tokens en la UI
+- proxy controlado y centralizado hacia servicios internos
+
+---
+
+## 🧪 Testing
+
+### `oraculo_api`
+
+La suite validada cubre, entre otras cosas:
+
+- registro y login
+- `/auth/me`
+- health checks
+- creación de predicción
+- filtros de historial
+- aislamiento por usuario
+- control de payload grande
+- mapeo de errores de inferencia
+
+### `oraculo_agente_ia`
+
+La base de pruebas y doubles del agente permiten validar:
+
+- routing conversacional
+- continuidad de predicción
+- extracción de campos
+- flujo de chat
+- RAG y knowledge docs
+- validación de upstream
+- composición de respuestas con cerebro falso
+- health y dependencias en entorno controlado
+
+### `oraculo_web`
+
+La suite con `FakeGateway` está preparada para validar:
+
+- login y register
+- lectura de sesión
+- proxy de chat
+- carga de archivos al knowledge base
+- integración de la app con el gateway falso
+- comportamiento del flujo web sin depender de upstreams reales
+
+---
+
+## 🐳 Docker
+
+Cada servicio incluye su propio `Dockerfile`.
+
+### `oraculo_api`
+
+- usa Python slim
+- instala dependencias
+- corre migraciones
+- arranca `uvicorn`
+
+### `oraculo_agente_ia`
+
+- usa Python slim
+- instala dependencias
+- copia `app`, `scripts` y `knowledge_base`
+- prepara carpetas `data`
+- arranca `uvicorn`
+
+### `oraculo_web`
+
+- usa Python slim
+- instala dependencias
+- copia `app`
+- arranca `uvicorn`
+
+> No hay un `docker-compose` raíz en lo que pude inspeccionar, así que el despliegue se plantea por servicio.
+
+---
+
+## 📚 Orden recomendado para entender el repositorio
+
+Si una persona entra nueva al proyecto, el mejor orden de lectura es:
+
+1. este `README.md`
+2. `oraculo_api/README.md`
+3. `oraculo_agente_ia/README.md`
+4. `oraculo_web/README.md`
+
+Si el foco es puramente MLOps:
 
 1. `oraculo_api/EDA_For_All_Tree_clean.ipynb`
-2. `_tmp_nb_cells/`
+2. `oraculo_api/app/ml/`
 3. `mlops_activos/`
+4. `_tmp_nb_cells/`
 
 ---
 
-## Qué problema resuelve esta organización
+## 🧩 Qué problema resuelve esta organización
 
-La carpeta `Proyecto/` evita tener un sistema fragmentado en piezas sueltas sin conexión. En lugar de tener:
+Este repositorio evita que el proyecto quede fragmentado en piezas sueltas:
 
-- un notebook aislado;
-- una API separada;
-- un agente por otro lado;
-- una web desconectada;
+- un notebook sin endpoint;
+- un backend sin capa inteligente;
+- un agente sin frontend;
+- una web sin trazabilidad ni auth real.
 
-todo queda reunido y trazable en un solo workspace maestro.
+En cambio, organiza el sistema como una plataforma conectada:
 
-Eso permite:
+- el notebook entrena y exporta;
+- la API sirve inferencia;
+- el agente entiende lenguaje natural;
+- la web entrega una experiencia usable.
 
-- evolucionar el notebook sin perder la vista del backend;
-- endurecer el backend sin olvidar el agente;
-- mejorar el agente sin romper la experiencia web;
-- documentar el sistema completo desde una sola raíz.
+---
 
-## Resumen operativo final
+## ✅ Resumen operativo
 
-Aunque cada carpeta tiene identidad propia, juntas forman una sola plataforma:
+**Proyecto Oráculo** es un workspace integral donde:
 
-- `oraculo_api/` es la capa de inferencia estructurada y autenticada.
-- `oraculo_agente_ia/` es la capa de inteligencia conversacional y RAG.
-- `oraculo_web/` es la capa de acceso para el usuario final.
-- `mlops_activos/` concentra salidas serializadas del pipeline.
-- `_tmp_nb_cells/` sirve como espacio de cirugía técnica del notebook.
+- `oraculo_api` es la capa de inferencia estructurada y autenticada,
+- `oraculo_agente_ia` es la capa agentic con memoria y RAG,
+- `oraculo_web` es la capa de acceso para el usuario final,
+- y los artefactos de notebook/MLOps sostienen el origen del modelo.
 
-Esta carpeta raíz existe para que esas piezas no vivan desconectadas, sino coordinadas dentro de un mismo ecosistema de desarrollo, validación y despliegue.
+No es un repositorio de piezas aisladas.  
+Es una arquitectura completa para pasar de entrenamiento tabular a experiencia final de usuario, manteniendo seguridad, trazabilidad y modularidad.
+
+---
+
+## 📌 Próximos pasos recomendados
+
+Si quieres llevar el proyecto a una versión todavía más sólida, los siguientes pasos naturales serían:
+
+- agregar orquestación local con `docker-compose`
+- centralizar observabilidad
+- incorporar CI con lint, tests y coverage
+- formalizar variables por entorno
+- endurecer persistencia en producción con Postgres y vector DB dedicada
+- documentar ejemplos de payload reales por servicio
+- unificar los tres README internos con un mismo estilo de branding
+
+---
+
+<p align="center">
+  <strong>Oráculo no es solo una API, un agente o una web: es el pipeline completo convertido en producto.</strong>
+</p>
