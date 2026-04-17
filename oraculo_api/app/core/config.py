@@ -18,7 +18,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    app_name: str = "Oraculo Adult Income API"
+    app_name: str = "Oráculo Adult Income API"
     app_version: str = "2.0.0"
     environment: Literal["local", "development", "test", "staging", "production"] = "development"
     debug: bool = False

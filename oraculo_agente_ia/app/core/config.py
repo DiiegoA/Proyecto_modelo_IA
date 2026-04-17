@@ -18,7 +18,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    app_name: str = "Oraculo Agente IA"
+    app_name: str = "Oráculo Agente IA"
     app_version: str = "1.0.0"
     environment: Literal["local", "development", "test", "staging", "production"] = "development"
     debug: bool = False
